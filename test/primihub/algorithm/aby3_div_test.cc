@@ -114,7 +114,7 @@ TEST(add_operator, aby3_3pc_test) {
     // sfmatrix
     u64 rows = 4, cols = 1;
     f64Matrix<D20> f64fixedMatrix(rows, cols);
-    double divisior[4] = {6.5, -15.0, 23.2, -33.0};
+    double divisior[4] = {6.5, -15.0, 23.2, 5000};
     vector<double> test_number(divisior, divisior + 4);
     f64Matrix<D20> f64fixedMatrix_B(rows, cols);
     for (u64 i = 0; i < rows; ++i) {
