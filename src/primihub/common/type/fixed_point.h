@@ -12,6 +12,7 @@ namespace primihub {
 enum Decimal {
   D0 = 0,
   D8 = 8,
+  D20 = 20,
   D16 = 16,
   D32 = 32
 };
