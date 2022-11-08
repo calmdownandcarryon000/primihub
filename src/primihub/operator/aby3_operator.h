@@ -637,7 +637,7 @@ public:
     //truncate D位，不进行额外的truncate
     MPC_Dotproduct(denominator, w0, bw0, 0);
     std::cout << "bw0 result: " << revealAll(bw0).format(HeavyFmt) << std::endl;
-    //truncate D+double_precision位
+    //truncate D+double_precision位  前面扩大，这里复原
     //a/b的初始近似值
     sf64Matrix<D> aw0(B.rows(), B.cols());
     MPC_Dotproduct(numerator, w0, aw0, double_precision);

@@ -101,17 +101,22 @@ TEST(add_operator, aby3_3pc_test) {
     u64 rows = 4, cols = 1;
     const Decimal myD = D20;
     f64Matrix<myD> f64fixedMatrix(rows, cols);
+    //除数
     double divisior[4] = {5000, 500,50,5};
     vector<double> test_number(divisior, divisior + 4);
     f64Matrix<myD> f64fixedMatrix_B(rows, cols);
     for (u64 i = 0; i < rows; ++i) {
       for (u64 j = 0; j < cols; ++j) {
-        //被除数numerator[2,3,4,5]
-        f64fixedMatrix(i, j) = 2 + double(i) + j;
         //除数denominator
         f64fixedMatrix_B(i, j) = test_number[i + j];
       }
     }
+    //被除数
+    f64fixedMatrix(0, 0) = 4;
+    f64fixedMatrix(1, 0) = 4;
+    f64fixedMatrix(2, 0) = 4;
+    f64fixedMatrix(3, 0) = 4;
+
   pid_t pid = fork();
   if (pid != 0) {
     MPCOperator mpc(0, "01", "02");
@@ -137,14 +142,8 @@ TEST(add_operator, aby3_3pc_test) {
     //   }
     // }
     //被除数numerator[2,3,-4,-5]
-    f64fixedMatrix(0, 0) = 4;
-    f64fixedMatrix(1, 0) = 4;
-    f64fixedMatrix(2, 0) = 4;
-    f64fixedMatrix(3, 0) = 4;
-    // f64fixedMatrix_B(0,0) = -1.3
-    // f64fixedMatrix_B(1,0) = -1.3
-    // f64fixedMatrix_B(2,0) = -1.3
-    // f64fixedMatrix_B(3,0) = -1.3
+
+
     sf64Matrix<myD> sf64fixedMatrix(rows, cols);
     sf64Matrix<myD> sf64fixedMatrix_B(rows, cols);
     // To encrypt it, we use
@@ -184,17 +183,7 @@ TEST(add_operator, aby3_3pc_test) {
   if (pid != 0) {
     MPCOperator mpc(1, "12", "01");
     mpc.setup("127.0.0.1", "127.0.0.1", (u32)1515, (u32)1313);
-    // u64 rows = 4, cols = 1;
-    // f64Matrix<D20> f64fixedMatrix(rows, cols);
-    // double divisior[4] = {-6.5, -15.0, 23.2, 33.0};
-    // vector<double> test_number(divisior, divisior + 4);
-    // f64Matrix<D20> f64fixedMatrix_B(rows, cols);
-    // for (u64 i = 0; i < rows; ++i) {
-    //   for (u64 j = 0; j < cols; ++j) {
-    //     f64fixedMatrix(i, j) = 2 + double(i) + j;
-    //     f64fixedMatrix_B(i, j) = test_number[i + j];
-    //   }
-    // }
+ 
 
     sf64Matrix<myD> sf64fixedMatrix(rows, cols);
     sf64Matrix<myD> sf64fixedMatrix_B(rows, cols);
@@ -225,18 +214,6 @@ TEST(add_operator, aby3_3pc_test) {
 
   MPCOperator mpc(2, "02", "12");
   mpc.setup("127.0.0.1", "127.0.0.1", (u32)1414, (u32)1515);
-  // u64 rows = 4, cols = 1;
-  // f64Matrix<D20> f64fixedMatrix(rows, cols);
-  // double divisior[4] = {-6.5, -15.0, 23.2, 33.0};
-  // vector<double> test_number(divisior, divisior + 4);
-  // f64Matrix<D20> f64fixedMatrix_B(rows, cols);
-  // for (u64 i = 0; i < rows; ++i) {
-  //   for (u64 j = 0; j < cols; ++j) {
-  //     // f64fixedMatrix(i, j) = 2.3343 + double(i) + j;
-  //     f64fixedMatrix(i, j) = 2 + double(i) + j;
-  //     f64fixedMatrix_B(i, j) = test_number[i + j];
-  //   }
-  // }
 
   sf64Matrix<myD> sf64fixedMatrix(rows, cols);
   sf64Matrix<myD> sf64fixedMatrix_B(rows, cols);
