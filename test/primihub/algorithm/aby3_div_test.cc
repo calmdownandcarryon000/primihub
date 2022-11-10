@@ -101,8 +101,8 @@ TEST(add_operator, aby3_3pc_test) {
     u64 rows = 4, cols = 1;
     const Decimal myD = D20;
     f64Matrix<myD> f64fixedMatrix(rows, cols);
-    //除数 除数小于0.5会有问题
-    double divisior[4] = {0.55, 678.457,-4300.343455,0.123};
+    //除数 
+    double divisior[4] = {5000, 500,5,0.05};
     vector<double> test_number(divisior, divisior + 4);
     f64Matrix<myD> f64fixedMatrix_B(rows, cols);
     for (u64 i = 0; i < rows; ++i) {

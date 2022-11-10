@@ -7,6 +7,7 @@
 #include <random>
 #include <unistd.h>
 #include <vector>
+#include <cmath>
 
 #include "src/primihub/common/defines.h"
 #include "src/primihub/common/type/fixed_point.h"
@@ -602,7 +603,11 @@ public:
         constant_one(k, j) = 1;
         precision(k, j) = rank(k, j) + 1;
         double_precision(k, j) = 2 * precision(k, j);
-        normalization(k,j) = 1;
+        //normalization(k,j) = 1;
+        normalization(k,j) = pow(2,(i64)(rank(k,j)+1)*(-1));
+        std::cout << "normalization(k,j) result: " << normalization(k,j) << std::endl;
+        std::cout << "rank(k,j) result: " << rank(k,j) << std::endl;
+        std::cout << "-rank(k,j) result: " << (i64)(rank(k,j))*(-1) << std::endl;
       }
     }
 
@@ -630,7 +635,8 @@ public:
     //...............................................................................
      //归一化
     sf64Matrix<D> c(B.rows(), B.cols());
-    MPC_Dotproduct(denominator, sfnormalization, c, precision);
+    // MPC_Dotproduct(denominator, sfnormalization, c, precision);
+    MPC_Dotproduct(denominator, sfnormalization, c, 0);
     std::cout << "c result: " << revealAll(c).format(HeavyFmt) << std::endl;
     sf64Matrix<D> temp_twoc(B.rows(), B.cols());
     eval.asyncConstMul(constant_two, c,
@@ -640,7 +646,8 @@ public:
     w0 = sftwopotnine - temp_twoc; // here means w0 has been truncate by rank+1;
     std::cout << "1/c w0 result: " << revealAll(w0).format(HeavyFmt) << std::endl;
     //1/b初始近似值
-    MPC_Dotproduct(w0, sfnormalization, w0, precision);
+    // MPC_Dotproduct(w0, sfnormalization, w0, precision);
+    MPC_Dotproduct(w0, sfnormalization, w0, 0);
     std::cout << "1/b w0 result: " << revealAll(w0).format(HeavyFmt) << std::endl;
 
     sf64Matrix<D> epsilon0(B.rows(), B.cols());
@@ -670,7 +677,7 @@ public:
     sf64Matrix<D> epsilon_pre(B.rows(), B.cols());
     epsilon_pre = epsilon0; 
     //迭代次数越多，发生越位几率越大
-    for(int i = 0;i<10;i++){     
+    for(int i = 0;i<5;i++){     
       sf64Matrix<D> epsilon_i(B.rows(), B.cols());
       MPC_Dotproduct(epsilon_pre, epsilon_pre, epsilon_i, 0);
       sf64Matrix<D> epsilon_i_one(B.rows(), B.cols());
