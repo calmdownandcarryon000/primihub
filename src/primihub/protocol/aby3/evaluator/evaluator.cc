@@ -69,6 +69,10 @@ namespace primihub {
   Sh3Task Sh3Evaluator::asyncMul(Sh3Task dependency, const si64Matrix& A,
                                  const si64Matrix& B, si64Matrix& C) {
     return dependency.then([&](CommPkgBase* comm, Sh3Task self) {
+          //各方本地计算
+          //P0:x1*y1+x1*y2+x2*y1
+          //P1:x2*y2+x2*y3+x3*y2
+          //P2:x3*y3+x3*y1+x1*y3
         C.mShares[0] = A.mShares[0] * B.mShares[0]
                       + A.mShares[0] * B.mShares[1]
                       + A.mShares[1] * B.mShares[0];
@@ -327,6 +331,10 @@ namespace primihub {
       const si64& B, si64& C, u64 shift) {
     return dependency.then([&, shift](CommPkgBase* comm, Sh3Task& self) -> void {
       auto truncationTuple = getTruncationTuple(1, 1, shift);
+          //各方本地计算
+          //P0:x1*y1+x1*y2+x2*y1
+          //P1:x2*y2+x2*y3+x3*y2
+          //P2:x3*y3+x3*y1+x1*y3
       auto abMinusR = A.mData[0] * B.mData[0]
                     + A.mData[0] * B.mData[1]
                     + A.mData[1] * B.mData[0];
@@ -371,6 +379,7 @@ namespace primihub {
   Sh3Task Sh3Evaluator::asyncMul(Sh3Task dependency, const si64Matrix& A,
         const si64Matrix& B, si64Matrix& C, u64 shift) {
     return dependency.then([&, shift](CommPkgBase* comm, Sh3Task& self) -> void {
+      //
       i64Matrix abMinusR = A.mShares[0] * B.mShares[0]
                          + A.mShares[0] * B.mShares[1]
                          + A.mShares[1] * B.mShares[0];
@@ -387,7 +396,9 @@ namespace primihub {
       auto next = (rt.mPartyIdx + 1) % 3;
       auto prev = (rt.mPartyIdx + 2) % 3;
       auto comm_cast = dynamic_cast<CommPkg&>(*comm);
+      //p0 p2
       if (next < 2) comm_cast.mNext().asyncSendCopy(abMinusR.data(), abMinusR.size());
+      //p1 p2
       if (prev < 2) comm_cast.mPrev().asyncSendCopy(abMinusR.data(), abMinusR.size());
       if (rt.mPartyIdx < 2) {
         auto shares = std::make_unique<std::array<i64Matrix, 3>>();
@@ -526,10 +537,14 @@ namespace primihub {
                                   const si64Matrix &B, si64Matrix &C) {
     return dependency
         .then([&](CommPkgBase *comm, Sh3Task self) {
+          //各方本地计算
+          //P0:x1*y1+x1*y2+x2*y1
+          //P1:x2*y2+x2*y3+x3*y2
+          //P2:x3*y3+x3*y1+x1*y3
           C.mShares[0] = A.mShares[0].array() * B.mShares[0].array() +
                          A.mShares[0].array() * B.mShares[1].array() +
                          A.mShares[1].array() * B.mShares[0].array();
-
+          //矩阵大小 即有几个数
           for (u64 i = 0; i < C.size(); ++i) {
             C.mShares[0](i) += mShareGen.getShare();
           }
@@ -552,6 +567,7 @@ namespace primihub {
   Sh3Task Sh3Evaluator::asyncDotMul(Sh3Task dependency, const si64Matrix &A,
                                   const si64Matrix &B, si64Matrix &C,
                                   u64 shift) {
+    std::cout << "在这里！！！！！！！！！！！！！！ " << endl;
     return dependency
         .then([&, shift](CommPkgBase *comm, Sh3Task &self) -> void {
           i64Matrix abMinusR = A.mShares[0].array() * B.mShares[0].array() +
@@ -563,7 +579,8 @@ namespace primihub {
 
           abMinusR -= truncationTuple.mR;
           C.mShares = std::move(truncationTuple.mRTrunc.mShares);
-
+          
+    
           auto &rt = self.getRuntime();
 
           // reveal dependency.getRuntime().the value to party 0, 1
