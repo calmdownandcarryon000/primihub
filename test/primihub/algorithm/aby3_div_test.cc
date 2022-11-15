@@ -105,33 +105,21 @@ TEST(add_operator, aby3_3pc_test) {
     
 	  default_random_engine e(time(0));
 	  uniform_real_distribution<double> u(1.0,10000.0);
-    // double random1 = u(e);
-    // double random2 = u(e);
-    // double random3 = u(e);
-    // double random4 = u(e);
-    // double random5 = u(e);
-    // double random6 = u(e);
-    // double random7 = u(e);
-    // double random8 = u(e);
-
-    //除数 
+ 
     // double divisior[4] = {random1, random2, random3,random4};
     // // double divisior[4] = {5000, 500, 50,0.05};
     // vector<double> test_number(divisior, divisior + 4);
     f64Matrix<myD> f64fixedMatrix_B(rows, cols);
     for (u64 i = 0; i < rows; ++i) {
       for (u64 j = 0; j < cols; ++j) {
-        //除数denominator
+        //divisor
         f64fixedMatrix_B(i, j) = u(e);
+        //dividend
         f64fixedMatrix(i, j) = u(e);
       
       }
     }
-    //被除数
-    // f64fixedMatrix(0, 0) = u(e);
-    // f64fixedMatrix(1, 0) = u(e);
-    // f64fixedMatrix(2, 0) = u(e);
-    // f64fixedMatrix(3, 0) = u(e);
+
 
   pid_t pid = fork();
   if (pid != 0) {
@@ -164,7 +152,7 @@ TEST(add_operator, aby3_3pc_test) {
     std::cout << "plaintext result "<< std::endl;  
     for (u64 i = 0; i < rows; ++i) {
       for (u64 j = 0; j < cols; ++j) {
-        //被除数numerator[2,3,-4,-5] 除数[6.5, -15.0, 23.2, -33.0]
+      
         std::cout << f64fixedMatrix(i, j)<<" / "<<f64fixedMatrix_B(i, j)<<" = "<<f64fixedMatrix(i, j)/f64fixedMatrix_B(i, j)<< std::endl;    
       }
     }

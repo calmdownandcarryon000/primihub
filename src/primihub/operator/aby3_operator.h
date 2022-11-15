@@ -422,14 +422,6 @@ public:
           rank_matrix(k, j) = Alpha_matrix(k, j) + round_bound;
         }
       }
-      // if (partyIdx == 0) {
-      //   std::cout << "rank_matrix: " << rank_matrix << std::endl;
-      // }
-      // here we want to calculate a new sfmatrix with the sub result of
-      // (x-rank) we will use [[x]] = x1 + x2 + x3; then x1 - c, x2, x3 get the
-      // result [[x]]-c
-      // std::cout << "input Y is ? " << revealAll(Y).format(HeavyFmt)
-      //           << std::endl;
 
       f64Matrix<D> rank_temp(Y.rows(), Y.cols());
       for (int k = 0; k < Y.rows(); k++) {
@@ -457,7 +449,7 @@ public:
       //           << revealAll(Y_temp).format(HeavyFmt) << std::endl;
       // here we use MPC_DReLu to calculate the signal of (x-rank) and get 1 or
       // 0.
-      //符号
+
       drelu_result = MPC_DReLu(Y_temp);
       std::cout << i << "th Drelu result for Y_temp"
                 << revealAll(drelu_result).format(HeavyFmt) << std::endl;
@@ -467,13 +459,7 @@ public:
       // rank_matrix += rank * drelu_result_temp;//check if this is working!!!
       for (u64 i = 0; i < Alpha_matrix.size(); ++i)
         Alpha_matrix(i) += round_bound * static_cast<u64>(drelu_result_temp(i));
-      // Alpha_matrix += round_bound * drelu_result_temp
-      // then we use the result to multiply the rank , we get rank[i]+rank[i-1]
-      // or 0 what is important is that the rank_matrix should be all 0 at the
-      // first time.
-      // if (partyIdx == 0) {
-      //   std::cout << "Alpha_matrix: " << Alpha_matrix << std::endl;
-      // }
+
     } // 5 rounds iteration.
     if(partyIdx == 0)
     if (partyIdx == 0) {
@@ -519,25 +505,9 @@ public:
                       sf64Matrix<D> &C, u64 shift =0) {
     assert(A.cols() == B.cols() && A.rows() == B.rows() &&
            "Size of A and B should be completely consistent.");
-    //std::cout << "第YI个在这里！！！！！！！！！！！！！！ " <<endl;
-    //直接矩阵点乘，不需要循环
+    
     eval.asyncDotMul(runtime, A, B, C).get();
     
-    // vector<sf64<D>> vec_temp_A(A.size());
-    // vector<sf64<D>> vec_temp_B(B.size());
-    // vector<sf64<D>> vec_prod_result(C.size());
-
-    // vec_temp_A = MPC_sfmatrixTosfvec(A);
-    // vec_temp_B = MPC_sfmatrixTosfvec(B);
-
-    // for (int i = 0; i < vec_temp_A.size(); i++) {
-    //   //aby3乘法
-    //   eval.asyncMul(runtime, vec_temp_A[i].i64Cast(), vec_temp_B[i].i64Cast(),
-    //                 vec_prod_result[i].i64Cast(), D + shift)
-    //       .get();
-    // }
-
-    // C = MPC_sfvecTosfmatrix(vec_prod_result, C.rows(), C.cols());
   }
 
   template <Decimal D>
@@ -546,35 +516,8 @@ public:
     assert(A.cols() == B.cols() && A.rows() == B.rows() &&
            "Size of A and B should be completely consistent.");
 
-   
-    
-    //............................................................................
-    //if(shift==0){
     eval.asyncDotMul(runtime, A, B, C,D);
-   //std::cout << "第二个在这里！！！！！！！！！！！！！！ " <<endl;
-    //}
-    //............................................................................
-    // else{
-    // vector<sf64<D>> vec_temp_A(A.size());
-    // vector<sf64<D>> vec_temp_B(B.size());
-    // vector<sf64<D>> vec_prod_result(C.size());
-
-    // vec_temp_A = MPC_sfmatrixTosfvec(A);
-    // vec_temp_B = MPC_sfmatrixTosfvec(B);
-    // int count = 0;
-    // for (int k = 0; k < B.rows(); k++) {
-    //   for (int j = 0; j < B.cols(); j++) {
-        
-    //     eval.asyncMul(runtime, vec_temp_A[count].i64Cast(),
-    //                   vec_temp_B[count].i64Cast(),
-    //                   vec_prod_result[count].i64Cast(), D + shift(k,j))
-    //         .get();
-    //     count++;
-    //   }
-    // }
-
-    // C = MPC_sfvecTosfmatrix(vec_prod_result, C.rows(), C.cols());
-    // }
+  
   }
 
 
@@ -610,7 +553,10 @@ public:
     f64Matrix<D> normalization(B.rows(), B.cols());
 
     
-    //除数直接进行归一化，可以直接进行矩阵点乘，不需要再循环
+    
+    //The divisor is directly normalized, 
+    //so no additional truncation of the precision bit is required
+    //and matrix dot multiplication can be performed directly without recirculation
     for (int k = 0; k < B.rows(); k++) {
       for (int j = 0; j < B.cols(); j++) {
         // twopotnine(k, j) = 2.9142 * (1 << (rank(k, j) + 1));
@@ -620,7 +566,7 @@ public:
         precision(k, j) = rank(k, j) + 1;
         double_precision(k, j) = 2 * precision(k, j);
         //normalization(k,j) = 1;
-        //归一化
+        //normalization
         normalization(k,j) = pow(2,(i64)(rank(k,j)+1)*(-1));
       }
     }
@@ -628,7 +574,7 @@ public:
     sf64Matrix<D> sftwopotnine(B.rows(), B.cols());
     sf64Matrix<D> sfconstant_one(B.rows(), B.cols());
     sf64Matrix<D> sfnormalization(B.rows(), B.cols());
-    //得到分享值
+    //get shares
     if (partyIdx == 0) {
       enc.localFixedMatrix(runtime, twopotnine, sftwopotnine).get();
       enc.localFixedMatrix(runtime, constant_one, sfconstant_one).get();
@@ -647,20 +593,20 @@ public:
     eval.asyncConstMul(constant_two, denominator,
                        temp_twob); // const needn't .get()
     //...............................................................................
-
+    
     sf64Matrix<D> c(B.rows(), B.cols());
     // MPC_Dotproduct(denominator, sfnormalization, c, precision);
-    //不再需要额外右移，可以直接矩阵点乘
+    //truncate D，no additional truncation
     MPC_Dotproduct(denominator, sfnormalization, c, 0);
     std::cout << "c result: " << revealAll(c).format(HeavyFmt) << std::endl;
     sf64Matrix<D> temp_twoc(B.rows(), B.cols());
     eval.asyncConstMul(constant_two, c,
                     temp_twoc); // const needn't .get()
     //...............................................................................
-    //1/c初始近似值
+    //The initial approximation of 1/c
     w0 = sftwopotnine - temp_twoc; // here means w0 has been truncate by rank+1;
     std::cout << "1/c w0 result: " << revealAll(w0).format(HeavyFmt) << std::endl;
-    //1/b初始近似值
+    //The initial approximation of 1/b
     // MPC_Dotproduct(w0, sfnormalization, w0, precision);
     MPC_Dotproduct(w0, sfnormalization, w0, 0);
     std::cout << "1/b w0 result: " << revealAll(w0).format(HeavyFmt) << std::endl;
@@ -671,15 +617,15 @@ public:
 
     LOG(INFO) << "denominator result: "
           << revealAll(denominator).format(HeavyFmt);
-    //不进行额外的右移
+  
     MPC_Dotproduct(denominator, w0, bw0, 0);
     std::cout << "bw0 result: " << revealAll(bw0).format(HeavyFmt) << std::endl;
-    //truncate D+double_precision位  前面扩大，这里复原
-    //a/b的初始近似值
+   
+    //The initial approximation of a/b
     sf64Matrix<D> aw0(B.rows(), B.cols());
     MPC_Dotproduct(numerator, w0, aw0, 0);
     std::cout << "aw0 result: " << revealAll(aw0).format(HeavyFmt) << std::endl;
-    //初始误差值
+    //Initial error
     epsilon0 = sfconstant_one - bw0;
     std::cout << "epsilon0 result: " << revealAll(epsilon0).format(HeavyFmt) << std::endl;
     //..................................................................................................................................
@@ -687,11 +633,11 @@ public:
     epsilon0_one = sfconstant_one + epsilon0;
     std::cout << "epsilon0_one result: " << revealAll(epsilon0_one).format(HeavyFmt) << std::endl;
     sf64Matrix<D> epsilon_prod(B.rows(), B.cols());
-    //越来越逼近于a/b  (问题所在！！！会发生越位)
+    //Closer and closer to a/b (the problem!! Offside will happen)
     MPC_Dotproduct(epsilon0_one, aw0, epsilon_prod, 0);
     sf64Matrix<D> epsilon_pre(B.rows(), B.cols());
     epsilon_pre = epsilon0; 
-    //迭代次数越多，发生越位几率越大
+    //The more iterations, the greater the chance of offside
     for(int i = 0;i<1;i++){     
       sf64Matrix<D> epsilon_i(B.rows(), B.cols());
       MPC_Dotproduct(epsilon_pre, epsilon_pre, epsilon_i, 0);
@@ -702,274 +648,16 @@ public:
     }
     //..................................................................................................................................
  
-
     // get final result:
-
     //std::cout << revealAll(epsilon_prod).format(HeavyFmt) << std::endl;
     MPC_Dotproduct(epsilon_prod, quotient_sign, ret);
-    //对绝对值运算结果乘以符号
+
     //MPC_Dotproduct(aw0, quotient_sign, ret);
     std::cout << revealAll(ret).format(HeavyFmt) << std::endl;
     return ret;
   }
 
 
-//wz 对除数进行归一化处理时采用乘1截断的方式，该方式的问题是仍需要根据rank来截断，无法直接进行矩阵点成运算
-  // template <Decimal D>
-  // void MPC_MatrixDotprod(const sf64Matrix<D> &A, const sf64Matrix<D> &B,
-  //                        sf64Matrix<D> &C, u64 shift = 0) {
-  //   assert(A.cols() == B.cols() && A.rows() == B.rows() &&
-  //          "Size of A and B should be completely consistent.");
-  //   eval.asyncDotMul(runtime, A, B, C, shift).get();
-  // }
-
-  // template <Decimal D>
-  // sf64Matrix<D> MPC_Div(const sf64Matrix<D> &A, const sf64Matrix<D> &B) {
-  //   if (A.cols() != B.cols() || A.rows() != B.rows())
-  //     throw std::runtime_error(LOCATION);
-  //   sf64Matrix<D> ret(A.rows(), B.cols());
-
-  //   sf64Matrix<D> denominator_sign(B.rows(), B.cols());
-  //   sf64Matrix<D> denominator(B.rows(), B.cols());
-  //   denominator_sign = MPC_QuoDertermine(B);
-  //   denominator = MPC_Abs(B);
-  //   sf64Matrix<D> numerator_sign(A.rows(), A.cols());
-  //   sf64Matrix<D> numerator(A.rows(), A.cols());
-  //   numerator_sign = MPC_QuoDertermine(A);
-  //   numerator = MPC_Abs(A);
-
-
-  //   sf64Matrix<D> quotient_sign(B.rows(), B.cols());
-  //   MPC_Dotproduct(denominator_sign, numerator_sign, quotient_sign);
-
-    
-  //   /*because of the limitation of PIECEWISE, we have to input n rows and 1
-  //    * cols*/
-  //   // w0 = 2.9142-2b and 1 Note:2.9142 and 1 has been truncate by rank+1;
-  //   eMatrix<u64> rank = MPC_Pow(denominator);
-  //   eMatrix<u64> precision(B.rows(), B.cols());
-  //   eMatrix<u64> double_precision(B.rows(), B.cols());
-  //   // eMatrix<double> constant_two(B.rows(),B.cols());
-  //   f64Matrix<D> twopotnine(B.rows(), B.cols());
-  //   f64Matrix<D> constant_one(B.rows(), B.cols());
-  //   //因为无法对除数直接归一化，因此先扩大，最后结果再恢复
-  //   for (int k = 0; k < B.rows(); k++) {
-  //     for (int j = 0; j < B.cols(); j++) {
-  //       twopotnine(k, j) = 2.9142 * (1 << (rank(k, j) + 1));
-  //       constant_one(k, j) = (1 << 2*(rank(k, j) + 1));
-  //       precision(k, j) = rank(k, j) + 1;
-  //       double_precision(k, j) = 2 * precision(k, j);
-  //     }
-  //   }
-
-  //   sf64Matrix<D> sftwopotnine(B.rows(), B.cols());
-  //   sf64Matrix<D> sfconstant_one(B.rows(), B.cols());
-  //   //得到分享值
-  //   if (partyIdx == 0) {
-  //     enc.localFixedMatrix(runtime, twopotnine, sftwopotnine).get();
-  //     enc.localFixedMatrix(runtime, constant_one, sfconstant_one).get();
-  //   } else {
-  //     enc.remoteFixedMatrix(runtime, sftwopotnine).get();
-  //     enc.remoteFixedMatrix(runtime, sfconstant_one).get();
-  //   }
-  //   std::cout << "sftwopotnine result: " << revealAll(sftwopotnine).format(HeavyFmt) << std::endl;
-  //   std::cout << "sfconstant_one result: " << revealAll(sfconstant_one).format(HeavyFmt) << std::endl;
-
-  //   sf64Matrix<D> temp_twob(B.rows(), B.cols());
-  //   sf64Matrix<D> w0(B.rows(), B.cols());
-  //   i64 constant_two = 2;
-  //   eval.asyncConstMul(constant_two, denominator,
-  //                      temp_twob); // const needn't .get()
-  //   //1/b初始近似值
-  //   w0 = sftwopotnine - temp_twob; // here means w0 has been truncate by rank+1;
-  //   std::cout << "temp_twob result: " << revealAll(temp_twob).format(HeavyFmt) << std::endl;
-
-  //   sf64Matrix<D> epsilon0(B.rows(), B.cols());
-
-  //   sf64Matrix<D> bw0(B.rows(), B.cols());
-
-  //   LOG(INFO) << "denominator result: "
-  //         << revealAll(denominator).format(HeavyFmt);
-  //   //truncate D位，不进行额外的truncate
-  //   MPC_Dotproduct(denominator, w0, bw0, 0);
-  //   std::cout << "bw0 result: " << revealAll(bw0).format(HeavyFmt) << std::endl;
-  //   //truncate D+double_precision位  前面扩大，这里复原
-  //   //a/b的初始近似值
-  //   sf64Matrix<D> aw0(B.rows(), B.cols());
-  //   MPC_Dotproduct(numerator, w0, aw0, double_precision);
-  //   std::cout << "aw0 result: " << revealAll(aw0).format(HeavyFmt) << std::endl;
-  //   //初始误差值
-  //   epsilon0 = sfconstant_one - bw0;
-  //   std::cout << "epsilon0 result: " << revealAll(epsilon0).format(HeavyFmt) << std::endl;
-  //   //..................................................................................................................................
-  //   sf64Matrix<D> epsilon0_one(B.rows(), B.cols());
-  //   epsilon0_one = sfconstant_one + epsilon0;
-  //   std::cout << "epsilon0_one result: " << revealAll(epsilon0_one).format(HeavyFmt) << std::endl;
-  //   sf64Matrix<D> epsilon_prod(B.rows(), B.cols());
-  //   //越来越逼近于a/b  (问题所在！！！会发生越位)
-  //   MPC_Dotproduct(epsilon0_one, aw0, epsilon_prod, double_precision);
-  //   sf64Matrix<D> epsilon_pre(B.rows(), B.cols());
-  //   epsilon_pre = epsilon0; 
-  //   //迭代次数越多，发生越位几率越大
-  //   for(int i = 0;i<1;i++){     
-  //     sf64Matrix<D> epsilon_i(B.rows(), B.cols());
-  //     MPC_Dotproduct(epsilon_pre, epsilon_pre, epsilon_i, double_precision);
-  //     sf64Matrix<D> epsilon_i_one(B.rows(), B.cols());
-  //     epsilon_i_one = sfconstant_one + epsilon_i;
-  //     MPC_Dotproduct(epsilon_prod, epsilon_i_one, epsilon_prod, double_precision);
-  //     epsilon_pre = epsilon_i;
-  //   }
-  //   //..................................................................................................................................
-  //   //sf64Matrix<D> temp_epsilon0 = epsilon0;
-  //  // MPC_Dotproduct(epsilon0,temp_epsilon0,epsilon1);
-  //   // MPC_Dotproduct(epsilon0, epsilon0, epsilon1, precision);
-  //   // std::cout << "epsilon0 result: " << revealAll(epsilon0).format(HeavyFmt) << std::endl;
-  //   // MPC_Dotproduct(epsilon1, epsilon1, epsilon2, precision);
-  //   // std::cout << "epsilon1 result: " << revealAll(epsilon1).format(HeavyFmt) <<
-  //   // std::endl;
-  //   // MPC_Dotproduct(epsilon2, epsilon2, epsilon3, precision);
-  //   // std::cout << "epsilon2 result: " << revealAll(epsilon2).format(HeavyFmt) <<
-  //   // std::endl;
-  //   // MPC_Dotproduct(epsilon3, epsilon3, epsilon4, precision);
-  //   // std::cout << "epsilon3 result: " << revealAll(epsilon3).format(HeavyFmt) <<
-  //   // std::endl;
-  //   // std::cout << "epsilon4 result: " << revealAll(epsilon4).format(HeavyFmt) <<
-  //   // std::endl;
-  //   // MPC_Dotproduct(epsilon4, epsilon4, epsilon5, precision);
-  //   // std::cout << "epsilon5 result: " << revealAll(epsilon5).format(HeavyFmt) <<
-  //   // std::endl;
-  //   //     MPC_Dotproduct(epsilon5, epsilon5, epsilon6, precision);
-  //   // std::cout << "epsilon5 result: " << revealAll(epsilon6).format(HeavyFmt) <<
-  //   // std::endl;
-  //   //     MPC_Dotproduct(epsilon6, epsilon6, epsilon7, precision);
-  //   // std::cout << "epsilon5 result: " << revealAll(epsilon7).format(HeavyFmt) <<
-  //   // std::endl;
-  //   //     MPC_Dotproduct(epsilon7, epsilon7, epsilon8, precision);
-  //   // std::cout << "epsilon5 result: " << revealAll(epsilon8).format(HeavyFmt) <<
-  //   // std::endl;
-
-  //   // get final result:
-
-  //   //std::cout << revealAll(epsilon_prod).format(HeavyFmt) << std::endl;
-  //   MPC_Dotproduct(epsilon_prod, quotient_sign, ret);
-  //   //对绝对值运算结果乘以符号
-  //   //MPC_Dotproduct(aw0, quotient_sign, ret);
-  //   std::cout << revealAll(ret).format(HeavyFmt) << std::endl;
-  //   return ret;
-  // }
-
-  // template <Decimal D>
-  // sf64Matrix<D> MPC_Div(const sf64Matrix<D> &A, const sf64Matrix<D> &B) {
-  //   /*because of the limitation of PIECEWISE, we have to input n rows and 1
-  //    * cols*/
-  //   // w0 = 2.9142-2b and 1 Note:2.9142 and 1 has been truncate by rank+1;
-  //   if (A.cols() != B.cols() || A.rows() != B.rows())
-  //     throw std::runtime_error(LOCATION);
-  //   eMatrix<u64> rank = MPC_Pow(B);
-  //   eMatrix<u64> precision(B.rows(), B.cols());
-  //   eMatrix<u64> double_precision(B.rows(), B.cols());
-  //   // eMatrix<double> constant_two(B.rows(),B.cols());
-  //   f64Matrix<D> twopotnine(B.rows(), B.cols());
-  //   f64Matrix<D> constant_one(B.rows(), B.cols());
-  //   sf64Matrix<D> ret(A.rows(), B.cols());
-  //   for (int k = 0; k < B.rows(); k++) {
-  //     for (int j = 0; j < B.cols(); j++) {
-  //       // constant_two(k,j) = 2;
-  //       twopotnine(k, j) = 2.9142 * (1 << (rank(k, j) + 1));
-  //       constant_one(k, j) = (1 << (rank(k, j) + 1));
-  //       precision(k, j) = rank(k, j) + 1;
-  //       double_precision(k, j) = 2 * precision(k, j);
-  //     }
-  //   }
-
-  //   sf64Matrix<D> sftwopotnine(B.rows(), B.cols());
-  //   sf64Matrix<D> sfconstant_one(B.rows(), B.cols());
-  //   if (partyIdx == 0) {
-  //     enc.localFixedMatrix(runtime, twopotnine, sftwopotnine).get();
-  //     enc.localFixedMatrix(runtime, constant_one, sfconstant_one).get();
-  //   } else {
-  //     enc.remoteFixedMatrix(runtime, sftwopotnine).get();
-  //     enc.remoteFixedMatrix(runtime, sfconstant_one).get();
-  //   }
-  //   // std::cout << "sftwopotnine result: "
-  //   //           << revealAll(sftwopotnine).format(HeavyFmt) << std::endl;
-  //   // std::cout << "sfconstant_one result: "
-  //   //           << revealAll(sfconstant_one).format(HeavyFmt) << std::endl;
-
-  //   sf64Matrix<D> temp_twob(B.rows(), B.cols());
-  //   sf64Matrix<D> w0(B.rows(), B.cols());
-  //   i64 constant_two = 2;
-  //   eval.asyncConstMul(constant_two, B, temp_twob); // const needn't .get()
-  //   w0 = sftwopotnine - temp_twob; // here means w0 has been truncate by
-  //   rank+1;
-  //   // std::cout << "w0 result: " << revealAll(w0).format(HeavyFmt) <<
-  //   // std::endl; calculate: epsilon0 = (1 - bw0), epsilon1 = (1 - bw0) ^2
-  //   sf64Matrix<D> epsilon0(B.rows(), B.cols());
-  //   sf64Matrix<D> epsilon1(B.rows(), B.cols());
-  //   sf64Matrix<D> epsilon2(B.rows(), B.cols());
-  //   sf64Matrix<D> epsilon3(B.rows(), B.cols());
-  //   sf64Matrix<D> epsilon4(B.rows(), B.cols());
-  //   sf64Matrix<D> bw0(B.rows(), B.cols());
-  //   // vector<sf64<D>> vec_B(B.size());
-  //   // vector<sf64<D>> vec_w0(B.size());
-  //   MPC_Dotproduct(B, w0, bw0, precision);
-  //   // std::cout << "bw0 result: " << revealAll(bw0).format(HeavyFmt) <<
-  //   // std::endl;
-  //   epsilon0 = sfconstant_one - bw0;
-  //   // sf64Matrix<D> temp_epsilon0 = epsilon0;
-  //   // MPC_Dotproduct(epsilon0,temp_epsilon0,epsilon1);
-  //   MPC_Dotproduct(epsilon0, epsilon0, epsilon1, precision);
-  //   // std::cout << "epsilon0 result: " <<
-  //   revealAll(epsilon0).format(HeavyFmt)
-  //   //           << std::endl;
-  //   MPC_Dotproduct(epsilon1, epsilon1, epsilon2, precision);
-  //   // std::cout << "epsilon1 result: " <<
-  //   revealAll(epsilon1).format(HeavyFmt)
-  //   //           << std::endl;
-  //   MPC_Dotproduct(epsilon2, epsilon2, epsilon3, precision);
-  //   // std::cout << "epsilon2 result: " <<
-  //   revealAll(epsilon2).format(HeavyFmt)
-  //   //           << std::endl;
-  //   MPC_Dotproduct(epsilon3, epsilon3, epsilon4, precision);
-  //   // std::cout << "epsilon3 result: " <<
-  //   revealAll(epsilon3).format(HeavyFmt)
-  //   //           << std::endl;
-  //   // std::cout << "epsilon4 result: " <<
-  //   revealAll(epsilon4).format(HeavyFmt)
-  //   //           << std::endl;
-
-  //   sf64Matrix<D> aw0(B.rows(), B.cols());
-  //   sf64Matrix<D> epsilon0_one(B.rows(), B.cols());
-  //   epsilon0_one = sfconstant_one + epsilon0;
-  //   // std::cout << "sfconstant_one + epsilon0 result: "
-  //   //           << revealAll(epsilon0_one).format(HeavyFmt) << std::endl;
-  //   sf64Matrix<D> epsilon1_one(B.rows(), B.cols());
-  //   epsilon1_one = sfconstant_one + epsilon1;
-
-  //   sf64Matrix<D> epsilon2_one(B.rows(), B.cols());
-  //   epsilon2_one = sfconstant_one + epsilon2;
-
-  //   sf64Matrix<D> epsilon3_one(B.rows(), B.cols());
-  //   epsilon3_one = sfconstant_one + epsilon3;
-
-  //   sf64Matrix<D> epsilon4_one(B.rows(), B.cols());
-  //   epsilon4_one = sfconstant_one + epsilon4;
-
-  //   sf64Matrix<D> epsilon_prod(B.rows(), B.cols());
-  //   MPC_Dotproduct(A, w0, aw0, precision);
-  //   // std::cout << "aw0 result: " << revealAll(aw0).format(HeavyFmt) <<
-  //   // std::endl;
-  //   MPC_Dotproduct(epsilon0_one, epsilon1_one, epsilon_prod, precision);
-
-  //   // std::cout << "epsilon_prod result: "
-  //   //           << revealAll(epsilon_prod).format(HeavyFmt) << std::endl;
-  //   MPC_Dotproduct(epsilon_prod, w0, epsilon_prod,
-  //                  precision); //(1+e0)(1+e1)(1+e2)(1+e3)
-  //   MPC_Dotproduct(epsilon_prod, epsilon2_one, epsilon_prod, precision);
-  //   MPC_Dotproduct(epsilon_prod, epsilon3_one, epsilon_prod, precision);
-  //   MPC_Dotproduct(epsilon_prod, A, ret, double_precision);
-  //   return ret;
-  // }
   template <Decimal D> void MPC_Compare(f64Matrix<D> &m, sbMatrix &sh_res) {
     // Get matrix shape of all party.
     std::vector<std::array<uint64_t, 2>> all_party_shape;
