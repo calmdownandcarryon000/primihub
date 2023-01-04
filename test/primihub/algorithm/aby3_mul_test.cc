@@ -171,11 +171,7 @@ void fixedPointOperations(u64 partyIdx) {
   fixedMatrix2(3, 0) = 3930.800634388091;
   fixedMatrix2(4, 0) = 7265.431388578868;
   // We can populate is by
-  // for (u64 i = 0; i < rows; ++i)
-  //   for (u64 j = 0; j < cols; ++j) {
-  //     fixedMatrix1(i, j) = double(i) / j;
-  //     fixedMatrix2(i, j) = double(i) / j;
-  //   }
+
   // To encrypt it, we use
   sf64Matrix<D20> sharedMatrix1(rows, cols);
   sf64Matrix<D20> sharedMatrix2(rows, cols);

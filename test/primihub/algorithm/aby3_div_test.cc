@@ -28,35 +28,23 @@ int setup(u64 partyIdx, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &eval,
 
   switch (partyIdx) {
   case 0:
-    // comm.mNext = Session(ios, "127.0.0.1:1313", SessionMode::Server,
-    // "01").addChannel(); comm.mPrev = Session(ios, "127.0.0.1:1313",
-    // SessionMode::Server, "02").addChannel();
+   
     ep_next_.start(ios, "127.0.0.1", 1313, SessionMode::Server, "01");
     ep_prev_.start(ios, "127.0.0.1", 1414, SessionMode::Server, "02");
 
-    // comm.setPrev(Session(ios, "127.0.0.1", 1414, SessionMode::Server,
-    // "02").addChannel());
 
     break;
   case 1:
-    // comm.mNext = Session(ios, "127.0.0.1:1313", SessionMode::Server,
-    // "12").addChannel(); comm.mPrev = Session(ios, "127.0.0.1:1313",
-    // SessionMode::Client, "01").addChannel();
+
     ep_next_.start(ios, "127.0.0.1", 1515, SessionMode::Server, "12");
     ep_prev_.start(ios, "127.0.0.1", 1313, SessionMode::Client, "01");
-    // comm.setNext(Session(ios, "127.0.0.1", 1515, SessionMode::Server,
-    // "12").addChannel()); comm.setPrev(Session(ios, "127.0.0.1", 1313,
-    // SessionMode::Client, "01").addChannel());
+
     break;
   default:
-    // comm.mNext = Session(ios, "127.0.0.1:1313", SessionMode::Client,
-    // "02").addChannel(); comm.mPrev = Session(ios, "127.0.0.1:1313",
-    // SessionMode::Client, "12").addChannel();
+
     ep_next_.start(ios, "127.0.0.1", 1414, SessionMode::Client, "02");
     ep_prev_.start(ios, "127.0.0.1", 1515, SessionMode::Client, "12");
-    // comm.setNext(Session(ios, "127.0.0.1", 1414, SessionMode::Client,
-    // "02").addChannel()); comm.setPrev(Session(ios, "127.0.0.1", 1515,
-    // SessionMode::Client, "12").addChannel());
+
     break;
   }
   comm.setNext(ep_next_.addChannel());
@@ -113,12 +101,16 @@ TEST(add_operator, aby3_3pc_test) {
     for (u64 i = 0; i < rows; ++i) {
       for (u64 j = 0; j < cols; ++j) {
         //divisor
-        f64fixedMatrix_B(i, j) = u(e);
+        // f64fixedMatrix_B(i, j) = u(e);
         //dividend
         f64fixedMatrix(i, j) = u(e);
       
       }
     }
+    f64fixedMatrix_B(0,0) = 2;
+    f64fixedMatrix_B(1,0) = 0.015;
+    f64fixedMatrix_B(2,0) = 5;
+    f64fixedMatrix_B(3,0) = 0.3;
 
 
   pid_t pid = fork();

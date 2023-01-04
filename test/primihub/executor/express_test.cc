@@ -65,6 +65,7 @@ runParty(std::map<std::string, std::vector<T>> &col_and_val,
   importColumnOwner(mpc_exec, col_and_owner);
   importColumnDtype(mpc_exec, col_and_dtype);
 
+  //Converts to a suffix expression
   mpc_exec->importExpress(expr);
   mpc_exec->resolveRunMode();
 
