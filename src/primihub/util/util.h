@@ -18,17 +18,21 @@
 #include <unordered_map>
 #include <boost/asio.hpp>
 #include <boost/circular_buffer.hpp>
+#include <netdb.h>
+#include <errno.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "src/primihub/protos/worker.grpc.pb.h"
 
 namespace primihub {
 
-using primihub::rpc::Node;
-
 void str_split(const std::string& str, std::vector<std::string>* v,
                char delimiter = ':');
 void peer_to_list(const std::vector<std::string>& peer,
-                  std::vector<Node>* list);
+                  std::vector<primihub::rpc::Node>* list);
 
 void sort_peers(std::vector<std::string>* peers);
 
@@ -55,8 +59,8 @@ class SBO_ptr {
   struct SBOInterface {
     virtual ~SBOInterface() {};
 
-    // assumes dest is uninitialized and calls the 
-    // placement new move constructor with this as 
+    // assumes dest is uninitialized and calls the
+    // placement new move constructor with this as
     // dest destination.
     virtual void moveTo(SBO_ptr<T, StorageSize>& dest) = 0;
   };
@@ -188,6 +192,22 @@ enum  SessionMode  {
    Server
 };
 
+class SCopedTimer {
+ public:
+  SCopedTimer() {
+    start_ = std::chrono::high_resolution_clock::now();
+  }
+  template<typename T = std::chrono::milliseconds>
+  double timeElapse() {
+    auto now_ = std::chrono::high_resolution_clock::now();
+    auto time_diff = std::chrono::duration_cast<T>(now_ - start_).count();
+    return time_diff;
+  }
+ private:
+  std::chrono::high_resolution_clock::time_point start_;
+};
+
+int getAvailablePort(uint32_t* port);
 
 }  // namespace primihub
 

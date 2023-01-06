@@ -13,33 +13,22 @@
 # limitations under the License.
 
 
-FROM ubuntu:20.04 as builder
-
-ENV LANG C.UTF-8
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install dependencies
-RUN  apt update \
-  && apt install -y python3 python3-dev gcc-8 g++-8 python-dev libgmp-dev cmake \
-  && apt install -y automake ca-certificates git libtool m4 patch pkg-config unzip make wget curl zip ninja-build npm \
-  && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8 \
-  && rm -rf /var/lib/apt/lists/*
-
-# install  bazelisk
-RUN npm install -g @bazel/bazelisk
+FROM primihub/primihub-node:build as builder
 
 WORKDIR /src
 ADD . /src
 
 # Bazel build primihub-node & primihub-cli & paillier shared library
 RUN bash pre_build.sh \
-  && bazel build --cxxopt=-D_AMD64_ --config=linux :node :cli :opt_paillier_c2py
+  && bazel build --config=linux --define cpu=amd64 --define microsoft-apsi=true :node :cli :opt_paillier_c2py :linkcontext
 
 FROM ubuntu:20.04 as runner
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install python3 and GCC openmp (Depends with cryptFlow2 library)
 RUN apt-get update \
-  && apt-get install -y python3 python3-dev libgomp1 python3-pip \
+  && apt-get install -y python3 python3-dev libgmp-dev python3-pip libzmq5 tzdata \
   && rm -rf /var/lib/apt/lists/*
 
 ARG TARGET_PATH=/root/.cache/bazel/_bazel_root/f8087e59fd95af1ae29e8fcb7ff1a3dc/execroot/primihub/bazel-out/k8-fastbuild/bin
@@ -64,12 +53,19 @@ RUN mkdir -p src/primihub/protos data log
 COPY --from=builder /src/python ./python
 COPY --from=builder /src/src/primihub/protos/ ./src/primihub/protos/
 
+# Copy opt_paillier_c2py.so to /app/python, this enable setup.py find it.
+RUN cp $TARGET_PATH/opt_paillier_c2py.so /app/python/
+# Copy linkcontext.so to /app/python, this enable setup.py find it.
+RUN cp $TARGET_PATH/linkcontext.so /app/python/
+
+# The setup.py will copy opt_paillier_c2py.so to python library path.
 WORKDIR /app/python
 RUN python3 -m pip install --upgrade pip \
   && python3 -m pip install -r requirements.txt \
-  && python3 setup.py install \
-  && python3 setup.py solib --solib-path $TARGET_PATH 
+  && python3 setup.py install
 
+RUN rm -rf /app/python/opt_paillier_c2py.so
+RUN rm -rf /app/python/linkcontext.so
 WORKDIR /app
 
 # gRPC server port

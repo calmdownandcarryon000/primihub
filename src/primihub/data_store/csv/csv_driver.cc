@@ -15,10 +15,10 @@
  */
 
 #include <variant>
+#include <sys/stat.h>
 
 #include "src/primihub/data_store/csv/csv_driver.h"
 #include "src/primihub/data_store/driver.h"
-
 
 #include <arrow/api.h>
 #include <arrow/csv/api.h>
@@ -45,7 +45,6 @@ void CSVCursor::close() {
 
 // read all data from csv file
 std::shared_ptr<primihub::Dataset> CSVCursor::read() {
-
   arrow::io::IOContext io_context = arrow::io::default_io_context();
   arrow::fs::LocalFileSystem local_fs(
       arrow::fs::LocalFileSystemOptions::Defaults());
@@ -126,7 +125,7 @@ std::shared_ptr<Cursor> &CSVDriver::initCursor(const std::string &filePath) {
 
 // FIXME to be deleted write file in driver directly.
 int CSVDriver::write(std::shared_ptr<arrow::Table> table,
-                     std::string &filePath) {
+                     const std::string& filePath) {
   filePath_ = filePath;
   auto result = arrow::io::FileOutputStream::Open(filePath);
   if (!result.ok()) {
