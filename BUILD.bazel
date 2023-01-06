@@ -499,12 +499,12 @@ cc_library(
             "src/primihub/algorithm/linear_model_gen.cc",
             "src/primihub/algorithm/logistic.cc",
             "src/primihub/algorithm/logistic_plain.cc",
+            "src/primihub/algorithm/logistic_test.cc",
             "src/primihub/algorithm/plainML.cc",
             "src/primihub/algorithm/falcon_lenet.cc",
             "src/primihub/algorithm/arithmetic.cc",
             "src/primihub/executor/express.cc",
             "src/primihub/operator/aby3_operator.cc",
-            "src/primihub/algorithm/missing_val_processing.cc",
     ]),
     hdrs = glob([
             "src/primihub/algorithm/base.h",
