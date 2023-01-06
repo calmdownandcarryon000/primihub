@@ -40,7 +40,7 @@ logistic_main(sf64Matrix<D> &train_data_0_1, sf64Matrix<D> &train_label_0_1,
   RegressionParam params;
   params.mBatchSize = B;
   params.mIterations = IT;
-  params.mLearningRate = 1.0 / (1 << 6);
+  params.mLearningRate = 1.0 / (1 << 7);
 
   eMatrix<double> val_W2;
 
@@ -218,70 +218,70 @@ int LogisticRegressionExecutor::_LoadDatasetFromCSV(std::string &filename) {
   // LOG(INFO)<<"array_len: "<<array_len;
   // LOG(INFO)<<"train_length: "<<train_length;
   // LOG(INFO)<<"test_length: "<<test_length;
-  // train_input_.resize(train_length, num_col);
-  // test_input_.resize(test_length, num_col);
-  // // m.resize(array_len, num_col);
-  // for (int i = 0; i < num_col; i++) {
-  //   if (table->schema()->GetFieldByName(col_names[i])->type()->id() == 9) {
-  //     auto array =
-  //         std::static_pointer_cast<Int64Array>(table->column(i)->chunk(0));
-  //     for (int64_t j = 0; j < array->length(); j++) {
-  //       if (j < train_length)
-  //         train_input_(j, i) = array->Value(j);
-  //       else
-  //         test_input_(j - train_length, i) = array->Value(j);
-  //       // m(j, i) = array->Value(j);
-  //     }
-  //   } else {
-  //     auto array =
-  //         std::static_pointer_cast<DoubleArray>(table->column(i)->chunk(0));
-  //     for (int64_t j = 0; j < array->length(); j++) {
-  //       if (j < train_length)
-  //         train_input_(j, i) = array->Value(j);
-  //       else
-  //         test_input_(j - train_length, i) = array->Value(j);
-  //       // m(j, i) = array->Value(j);
-  //     }
-  //   }
-  // }
-     train_input_.resize(train_length, num_col+1);
-  test_input_.resize(test_length, num_col+1);
+  train_input_.resize(train_length, num_col);
+  test_input_.resize(test_length, num_col);
   // m.resize(array_len, num_col);
-  for (int i = 0; i < num_col+1; i++) {
-    if(i==0){
-      for (int64_t j = 0; j < array_len; j++) {
-        if (j < train_length){
-           train_input_(j, i) = 1;
-          }else
-          test_input_(j - train_length, i) = 1;
-        // m(j, i) = array->Value(j);
-      }
-    }else{
-      if (table->schema()->GetFieldByName(col_names[i-1])->type()->id() == 9) {
-        auto array =
-            std::static_pointer_cast<Int64Array>(table->column(i-1)->chunk(0));
-      
-        for (int64_t j = 0; j < array->length(); j++) {
-          if (j < train_length)
-            train_input_(j, i) = array->Value(j);
-          else
-            test_input_(j - train_length, i) = array->Value(j);
-          // m(j, i) = array->Value(j);
-        }
-      } else {
+  for (int i = 0; i < num_col; i++) {
+    if (table->schema()->GetFieldByName(col_names[i])->type()->id() == 9) {
       auto array =
-          std::static_pointer_cast<DoubleArray>(table->column(i-1)->chunk(0));
+          std::static_pointer_cast<Int64Array>(table->column(i)->chunk(0));
       for (int64_t j = 0; j < array->length(); j++) {
         if (j < train_length)
           train_input_(j, i) = array->Value(j);
         else
           test_input_(j - train_length, i) = array->Value(j);
         // m(j, i) = array->Value(j);
-       }
+      }
+    } else {
+      auto array =
+          std::static_pointer_cast<DoubleArray>(table->column(i)->chunk(0));
+      for (int64_t j = 0; j < array->length(); j++) {
+        if (j < train_length)
+          train_input_(j, i) = array->Value(j);
+        else
+          test_input_(j - train_length, i) = array->Value(j);
+        // m(j, i) = array->Value(j);
       }
     }
-
   }
+  //    train_input_.resize(train_length, num_col+1);
+  // test_input_.resize(test_length, num_col+1);
+  // // m.resize(array_len, num_col);
+  // for (int i = 0; i < num_col+1; i++) {
+  //   if(i==0){
+  //     for (int64_t j = 0; j < array_len; j++) {
+  //       if (j < train_length){
+  //          train_input_(j, i) = 1;
+  //         }else
+  //         test_input_(j - train_length, i) = 1;
+  //       // m(j, i) = array->Value(j);
+  //     }
+  //   }else{
+  //     if (table->schema()->GetFieldByName(col_names[i-1])->type()->id() == 9) {
+  //       auto array =
+  //           std::static_pointer_cast<Int64Array>(table->column(i-1)->chunk(0));
+      
+  //       for (int64_t j = 0; j < array->length(); j++) {
+  //         if (j < train_length)
+  //           train_input_(j, i) = array->Value(j);
+  //         else
+  //           test_input_(j - train_length, i) = array->Value(j);
+  //         // m(j, i) = array->Value(j);
+  //       }
+  //     } else {
+  //     auto array =
+  //         std::static_pointer_cast<DoubleArray>(table->column(i-1)->chunk(0));
+  //     for (int64_t j = 0; j < array->length(); j++) {
+  //       if (j < train_length)
+  //         train_input_(j, i) = array->Value(j);
+  //       else
+  //         test_input_(j - train_length, i) = array->Value(j);
+  //       // m(j, i) = array->Value(j);
+  //      }
+  //     }
+  //   }
+
+  // }
   return array->length();
 }
 

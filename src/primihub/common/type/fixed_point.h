@@ -16,7 +16,7 @@ enum Decimal {
   D16 = 16,
   D32 = 32
 };
-const Decimal D = D16;
+const Decimal D = D20;
 // template<Decimal D>
 // using f64 = fpml::fixed_point<i64, 63 - D, D>;
 struct monostate {};
