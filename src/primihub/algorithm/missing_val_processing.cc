@@ -19,6 +19,7 @@
 #include <rapidjson/document.h>
 
 #include <iostream>
+#include <limits>
 
 #include "src/primihub/data_store/csv/csv_driver.h"
 #include "src/primihub/data_store/dataset.h"
@@ -154,7 +155,7 @@ void MissingProcess::_buildNewColumn(std::shared_ptr<arrow::Table> table,
     for (auto &val : new_col_val[0])
       VLOG(5) << val;
   }
-
+//???????????????????????????
   if (need_double) {
     arrow::MemoryPool *pool = arrow::default_memory_pool();
     arrow::DoubleBuilder builder(pool);
@@ -330,6 +331,7 @@ int MissingProcess::loadParams(primihub::rpc::Task &task) {
 
   bool found = false;
   std::string local_dataset;
+  //??????????????????????
   for (Value::ConstMemberIterator iter = doc.MemberBegin();
        iter != doc.MemberEnd(); iter++) {
     std::string ds_name = iter->name.GetString();
@@ -351,6 +353,7 @@ int MissingProcess::loadParams(primihub::rpc::Task &task) {
 
   Document doc_ds;
   auto doc_iter = doc.FindMember(local_dataset.c_str());
+  //??????????
   doc_ds.Swap(doc_iter->value);
 
   Value &vals = doc_ds["columns"];
@@ -362,7 +365,6 @@ int MissingProcess::loadParams(primihub::rpc::Task &task) {
     LOG(INFO) << "Type of column " << iter->name.GetString() << " is "
               << iter->value.GetInt() << ".";
   }
-
   new_dataset_id_ = doc_ds["newDataSetId"].GetString();
   LOG(INFO) << "New id of new dataset is " << new_dataset_id_ << ".";
   std::string next_name;
@@ -414,8 +416,10 @@ int MissingProcess::execute() {
         mpc_op_exec_->mNext.asyncSendCopy(cols_0);
         mpc_op_exec_->mPrev.asyncSendCopy(cols_0);
       } else {
+        
         if (party_id_ == (i + 1) % 3)
           mpc_op_exec_->mPrev.recv(cols_2);
+      
         else if (party_id_ == (i + 2) % 3)
           mpc_op_exec_->mNext.recv(cols_1);
         else
@@ -469,6 +473,7 @@ int MissingProcess::execute() {
 
     for (auto iter = col_and_dtype_.begin(); iter != col_and_dtype_.end();
          iter++) {
+          //找到目标列的个数
       auto t = std::find(local_col_names.begin(), local_col_names.end(),
                          iter->first);
 
@@ -481,6 +486,11 @@ int MissingProcess::execute() {
       int null_num = 0;
       int abnormal_num = 0;
 
+      int64_t max = ;
+      int64_t min = ;
+      //0:avge 1:max 2:min
+      int process_type = 0;
+
       // For each column type of which maybe double or int64, read every row as
       // a string then try to convert string into int64 value or double value,
       // this value should be a abnormal value when convert failed.
@@ -489,7 +499,9 @@ int MissingProcess::execute() {
         std::vector<std::vector<uint32_t>> abnormal_index;
         int col_index = std::distance(local_col_names.begin(), t);
 
-        if (iter->second == 1 || iter->second == 3) {
+        //本地统计
+        //Integer Long
+      if (iter->second == 1 || iter->second == 3) {
           null_num = 0;
           int_count = 0;
           int_sum = 0;
@@ -500,6 +512,7 @@ int MissingProcess::execute() {
                     << " chunk(s), expect type is int64.";
 
           abnormal_index.resize(chunk_num);
+          //db形式的是如何找出错误值？
           if (use_db) {
             for (int k = 0; k < chunk_num; k++) {
               auto value_array = std::static_pointer_cast<Int64Array>(
@@ -519,14 +532,16 @@ int MissingProcess::execute() {
               // Detect string that can't convert into int64_t value.
               int ret = 0;
               int64_t i64_val = 0;
+
               for (int64_t j = 0; j < str_array->length(); j++) {
                 if (str_array->IsNull(j)) {
                   LOG(WARNING) << "Find missing value in column " << iter->first
-                               << ", chunk " << k << ", index " << j << ".";
+                              << ", chunk " << k << ", index " << j << ".";
                   continue;
                 }
 
                 ret = _strToInt64(str_array->GetString(j), i64_val);
+                //convert fails
                 if (ret != 0) {
                   abnormal_num++;
                   abnormal_index[k].emplace_back(j);
@@ -535,15 +550,18 @@ int MissingProcess::execute() {
                       << "' in column " << iter->first << ", chunk " << k
                       << ", index " << j << ".";
                 } else {
+                  max = i64_val>max? i64_val:max;
+                  min = i64_val<min? i64_val:min;
                   int_sum += i64_val;
                 }
               }
-
+              //为什么没有在上面判断isNull时，计算null_num?
               null_num +=
                   table->column(col_index)->chunk(k)->data()->GetNullCount();
             }
             int_count = table->num_rows() - null_num - abnormal_num;
           }
+          //Double
         } else if (iter->second == 2) {
           null_num = 0;
           double_count = 0;
@@ -579,7 +597,7 @@ int MissingProcess::execute() {
                 // LOG(INFO) << str_array->GetString(j);
                 if (str_array->IsNull(j)) {
                   LOG(WARNING) << "Find missing value in column " << iter->first
-                               << ", chunk " << k << ", index " << j << ".";
+                              << ", chunk " << k << ", index " << j << ".";
                   continue;
                 }
                 ret = _strToDouble(str_array->GetString(j), d_val);
@@ -592,6 +610,8 @@ int MissingProcess::execute() {
                       << ", index " << j << ".";
 
                 } else {
+                  max = d_val>max? d_val:max;
+                  min = d_val<min? d_val:min;
                   double_sum += d_val;
                 }
               }
@@ -603,6 +623,211 @@ int MissingProcess::execute() {
             double_count = table->num_rows() - null_num - abnormal_num;
           }
         }
+      }
+        //MPC
+        //.........................................................................................
+        const Decimal myD = D20;
+        if (iter->second == 1 || iter->second == 3) {
+          f64Matrix<myD> m(1, 1);
+          f64Matrix<myD> empty(0, 0);
+          std::vector<bool> mpc_res;
+
+          m(0, 0) = max;
+          LOG(INFO) << "The max of party" << party_id_ << " column is: "
+                     << max << ".";
+
+          sbMatrix sh_res;
+          //first compare:p0-p1 
+          if(party_id_!=2){
+            mpc_exec->MPC_Compare(m, sh_res);
+          }else{
+            mpc_exec->MPC_Compare(empty, sh_res);
+          }
+          
+          if (party_id_ == 0) {
+            i64Matrix tmp;
+            tmp = mpc_exec->reveal(sh_res);
+            for (size_t i = 0; i < tmp.rows(); i++)
+              mpc_res.emplace_back(static_cast<bool>(tmp(i, 0)));
+          } else {
+            mpc_exec->reveal(sh_res, 0);
+          }
+          //second compare
+          for(int i=0; i<mpc_res.size(); i++){
+            //p0<p1
+            if(mpc_res(i)){
+              //p1-p2
+              if(party_id_!=0){
+                mpc_exec->MPC_Compare(m, sh_res);
+              }else{
+                mpc_exec->MPC_Compare(empty, sh_res);
+              }
+            }else{
+              //p0-p2
+              if(party_id_!=1){
+                mpc_exec->MPC_Compare(m, sh_res);
+              }else{
+                mpc_exec->MPC_Compare(empty, sh_res);
+              }
+            }
+          }
+
+          std::vector<bool> mpc_res2;
+          if (party_id == 0) {
+            i64Matrix tmp;
+            tmp = mpc_exec->reveal(sh_res);
+            for (size_t i = 0; i < tmp.rows(); i++)
+              mpc_res2.emplace_back(static_cast<bool>(tmp(i, 0)));
+          } else {
+            mpc_exec->reveal(sh_res, 0);
+          }
+
+          for(int i=0; i<mpc_res2.size(); i++){
+            //max is p2
+            if(mpc_res2(i)){
+              mpc_op_exec_->createShares(m, sh_m);
+                //这里是直接告诉p0 p1 还是要先分享再revealAll
+            }else{
+              //max is p0 or p1
+            }
+          }
+         
+          
+          // si64Matrix sh_m[3];
+          // for (uint8_t i = 0; i < 3; i++) {
+          //   if (i == party_id_) {
+          //     sh_m[i].resize(2, 1);
+          //     mpc_op_exec_->createShares(m, sh_m[i]);
+          //   } else {
+          //     sh_m[i].resize(2, 1);
+          //     mpc_op_exec_->createShares(sh_m[i]);
+          //   }
+          // }
+
+          // si64Matrix sh_sum(2, 1);
+          // sh_sum = sh_m[0];
+          // for (uint8_t i = 1; i < 3; i++)
+          //   sh_sum = sh_sum + sh_m[i];
+
+          // LOG(INFO) << "Run MPC sum to get sum of all party.";
+
+          // i64Matrix plain_sum(2, 1);
+          // plain_sum = mpc_op_exec_->revealAll(sh_sum);
+
+          // LOG(INFO) << "Sum of column in all party is " << plain_sum(0, 0)
+          //           << ", sum of count in all party is " << plain_sum(1, 0)
+          //           << ".";
+
+          // LOG(INFO) << "Build new array to save column value, missing and "
+          //              "abnormal value will be replaced by average value.";
+
+          // Update value in position that have null or abormal value with
+          // average value.
+          int64_t col_avg = plain_sum(0, 0) / plain_sum(1, 0);
+          std::shared_ptr<arrow::Array> new_array;
+          if (use_db) {
+            _buildNewColumn(table, col_index, std::to_string(col_avg),
+                            db_both_index[iter->first], false, new_array);
+          } else {
+            _buildNewColumn(table, col_index, std::to_string(col_avg),
+                            abnormal_index, false, new_array);
+          }
+          std::shared_ptr<arrow::ChunkedArray> chunk_array =
+              std::make_shared<arrow::ChunkedArray>(new_array);
+          std::shared_ptr<arrow::Field> field =
+              std::make_shared<arrow::Field>(iter->first, arrow::int64());
+
+          LOG(INFO) << "Replace column " << iter->first
+                    << " with new array in table.";
+
+          LOG(INFO) << "col_index:" << col_index;
+          LOG(INFO) << "name:" << field->name();
+          LOG(INFO) << "type:" << field->type();
+          LOG(INFO) << "table->type:" << table->field(col_index)->type();
+
+          auto result = table->SetColumn(col_index, field, chunk_array);
+          if (!result.ok()) {
+            std::stringstream ss;
+            ss << "Replace content of column " << iter->first << " failed, "
+               << result.status();
+            LOG(ERROR) << ss.str();
+            throw std::runtime_error(ss.str());
+          }
+
+          table = result.ValueOrDie();
+          LOG(INFO) << "Finish.";
+        } else if (iter->second == 2) {
+          eMatrix<double> m(2, 1);
+          m(0, 0) = double_sum;
+          m(1, 0) = double_count;
+
+          LOG(INFO) << "Local column: sum " << double_sum << ", count "
+                    << double_count << ".";
+
+          sf64Matrix<D16> sh_m[3];
+          for (uint8_t i = 0; i < 3; i++) {
+            if (i == party_id_) {
+              sh_m[i].resize(2, 1);
+              mpc_op_exec_->createShares(m, sh_m[i]);
+            } else {
+              sh_m[i].resize(2, 1);
+              mpc_op_exec_->createShares(sh_m[i]);
+            }
+          }
+
+          sf64Matrix<D16> sh_sum;
+          sh_sum = sh_m[0];
+          for (int j = 1; j < 3; j++)
+            sh_sum = sh_sum + sh_m[j];
+
+          LOG(INFO) << "Run MPC sum to get sum of all party.";
+
+          eMatrix<double> plain_sum(2, 0);
+          plain_sum = mpc_op_exec_->revealAll(sh_sum);
+
+          LOG(INFO) << "Sum of column in all party is " << plain_sum(0, 0)
+                    << ", sum of count in all party is " << plain_sum(1, 0)
+                    << ".";
+
+          LOG(INFO) << "Build new array to save column value, missing and "
+                       "abnormal value will be replaced by average value.";
+
+          // Update value in position that have null or abormal value with
+          // average value.
+          double col_avg = plain_sum(0, 0) / plain_sum(1, 0);
+
+          std::shared_ptr<arrow::Array> new_array;
+          if (use_db) {
+            _buildNewColumn(table, col_index, std::to_string(col_avg),
+                            db_both_index[iter->first], true, new_array);
+          } else {
+            _buildNewColumn(table, col_index, std::to_string(col_avg),
+                            abnormal_index, true, new_array);
+          }
+          std::shared_ptr<arrow::ChunkedArray> chunk_array =
+              std::make_shared<arrow::ChunkedArray>(new_array);
+          std::shared_ptr<arrow::Field> field =
+              std::make_shared<arrow::Field>(iter->first, arrow::float64());
+
+          LOG(INFO) << "Replace column " << iter->first
+                    << " with new array in table.";
+
+          auto result = table->SetColumn(col_index, field, chunk_array);
+          if (!result.ok()) {
+            std::stringstream ss;
+            ss << "Replace content of column " << iter->first << " failed, "
+               << result.status();
+            LOG(ERROR) << ss.str();
+            throw std::runtime_error(ss.str());
+          }
+
+          table = result.ValueOrDie();
+          LOG(INFO) << "Finish.";
+        }
+      } else {
+        LOG(ERROR) << "Can't find value of column " << iter->first << ".";
+      }
+        //.........................................................................................
 
         if (iter->second == 1 || iter->second == 3) {
           i64Matrix m(2, 1);
@@ -851,6 +1076,7 @@ int MissingProcess::_LoadDatasetFromCSV(std::string &filename) {
 
   local_col_names = table->ColumnNames();
 
+//????????????????????????????????????????????????????
   // 'array' include values in a column of csv file.
   int chunk_num = table->column(num_col - 1)->chunks().size();
   int array_len = 0;

@@ -16,12 +16,12 @@
 version: 1.0
 
 node: "node2"
-location: "127.0.0.1"
+location: "192.168.30.110"
 grpc_port: 50052
 
 # Use redis by default, set `use_redis: False` to use libp2p
 redis_meta_service:
-  redis_addr: "127.0.0.1:6379"
+  redis_addr: "192.168.30.110:6379"
   use_redis: True
   redis_password: "primihub"
 
@@ -72,10 +72,10 @@ localkv:
 # p2p paramaters
 p2p:
   bootstrap_nodes:
-    - "/ip4/127.0.0.1/tcp/4001/ipfs/QmaoqnKLY74VdY4P4Ujqyja3eZHy9xX7Q3tQaLWLcvuqHp"
-    - "/ip4/127.0.0.1/tcp/4001/ipfs/QmdSyhb8eR9dDSR5jjnRoTDBwpBCSAjT7WueKJ9cQArYoA"
+    - "/ip4/192.168.30.110/tcp/4001/ipfs/QmaoqnKLY74VdY4P4Ujqyja3eZHy9xX7Q3tQaLWLcvuqHp"
+    - "/ip4/192.168.30.110/tcp/4001/ipfs/QmdSyhb8eR9dDSR5jjnRoTDBwpBCSAjT7WueKJ9cQArYoA"
 
-  multi_addr: "/ip4/127.0.0.1/tcp/8888"
+  multi_addr: "/ip4/192.168.30.110/tcp/8888"
   dht_get_value_timeout:  60
 
 notify_server: 0.0.0.0:6668
