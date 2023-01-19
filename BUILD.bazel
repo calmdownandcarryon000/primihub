@@ -505,6 +505,7 @@ cc_library(
             "src/primihub/algorithm/arithmetic.cc",
             "src/primihub/executor/express.cc",
             "src/primihub/operator/aby3_operator.cc",
+            "src/primihub/algorithm/missing_val_processing.cc"
     ]),
     hdrs = glob([
             "src/primihub/algorithm/base.h",

@@ -54,8 +54,7 @@ public:
   int setup(std::string next_ip, std::string prev_ip, u32 next_port,
             u32 prev_port);
   void fini();
-  template <Decimal D>
-  void createShares(const eMatrix<double> &vals, sf64Matrix<D> &sharedMatrix) {
+  template <Decimal D> void createShares(const eMatrix<double> &vals, sf64Matrix<D> &sharedMatrix) {
     f64Matrix<D> fixedMatrix(vals.rows(), vals.cols());
     for (u64 i = 0; i < vals.size(); ++i)
       fixedMatrix(i) = vals(i);
@@ -99,15 +98,27 @@ public:
 
   void createShares(const i64Matrix &vals, si64Matrix &sharedMatrix);
 
+  void createShares(double vals, si64 &sharedInt);
+
+  void createShares(si64 &shared);
+
   void createShares(si64Matrix &sharedMatrix);
 
   si64Matrix createSharesByShape(const i64Matrix &val);
 
   si64Matrix createSharesByShape(u64 partyIdx);
 
+  
+  template <Decimal D> void createShares(const f64Matrix<D> &vals,
+                               sf64Matrix<D> &sharedMatrix) {
+  enc.localFixedMatrix<D>(runtime, vals, sharedMatrix).get();
+}
+
   template <Decimal D> void createShares(double vals, sf64<D> &sharedFixedInt) {
     enc.localFixed<D>(runtime, vals, sharedFixedInt).get();
   }
+
+
 
   template <Decimal D> void createShares(sf64<D> &sharedFixedInt) {
     enc.remoteFixed<D>(runtime, sharedFixedInt).get();
@@ -812,7 +823,7 @@ public:
   }
 
 
-  template <Decimal D> void MPC_Compare(f64Matrix<D> &m, sbMatrix &sh_res) {
+   template <Decimal D> void MPC_Compare(f64Matrix<D> &m, sbMatrix &sh_res) {
     // Get matrix shape of all party.
     std::vector<std::array<uint64_t, 2>> all_party_shape;
     for (uint64_t i = 0; i < 3; i++) {
@@ -938,6 +949,8 @@ public:
 
     LOG(INFO) << "Finish evalute MSB circuit.";
   }
+
+  void MPC_Compare(i64Matrix &m, sbMatrix &sh_res);
 
   void MPC_Compare(sbMatrix &sh_res);
 };
