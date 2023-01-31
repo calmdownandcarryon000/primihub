@@ -32,23 +32,23 @@ redis_meta_service:
 # load datasets
 datasets:
   # ABY3 LR test case datasets
-  - description: "train_party_0"
+  - description: "missing_INT_node0"
     model: "csv"
-    source: "data/train_party_0.csv"
-  - description: "test_party_0"
-    model: "csv"
-    source: "data/test_party_0.csv"
-  - description: "breast_0"
-    model: "csv"
-    source: "data/FL/wisconsin.data"
+    source: "/home/chainmaker/wz/scripts-for-caict/data/missing_INT_node0.csv"
+   # description: "test_party_0"
+   # model: "csv"
+   # source: "data/test_party_0.csv"
+   # description: "breast_0"
+   # model: "csv"
+   # source: "data/FL/wisconsin.data"
 
   # MNIST test case datasets
-  - description: "test_party_0_self"
-    model: "csv"
-    source: "data/falcon/dataset/MNIST/input_0"
-  - description: "test_party_0_next"
-    model: "csv"
-    source: "data/falcon/dataset/MNIST/input_1"
+  #  - description: "test_party_0_self"
+  # model: "csv"
+  # source: "data/falcon/dataset/MNIST/input_0"
+  # description: "test_party_0_next"
+  #  model: "csv"
+  # source: "data/falcon/dataset/MNIST/input_1"
 
     # Dataset authorization
     # authorization:
