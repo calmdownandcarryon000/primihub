@@ -18,16 +18,15 @@
 #include <parquet/stream_reader.h>
 #include <rapidjson/document.h>
 
+#include <float.h>
 #include <iostream>
 #include <limits>
-#include <float.h>
 
+#include "src/primihub/common/type/fixed_point.h"
 #include "src/primihub/data_store/csv/csv_driver.h"
 #include "src/primihub/data_store/dataset.h"
 #include "src/primihub/data_store/driver.h"
 #include "src/primihub/data_store/factory.h"
-#include "src/primihub/common/type/fixed_point.h"
-
 
 using arrow::Array;
 using arrow::DoubleArray;
@@ -158,7 +157,7 @@ void MissingProcess::_buildNewColumn(std::shared_ptr<arrow::Table> table,
     for (auto &val : new_col_val[0])
       VLOG(5) << val;
   }
-//???????????????????????????
+  //???????????????????????????
   if (need_double) {
     arrow::MemoryPool *pool = arrow::default_memory_pool();
     arrow::DoubleBuilder builder(pool);
@@ -419,10 +418,10 @@ int MissingProcess::execute() {
         mpc_op_exec_->mNext.asyncSendCopy(cols_0);
         mpc_op_exec_->mPrev.asyncSendCopy(cols_0);
       } else {
-        
+
         if (party_id_ == (i + 1) % 3)
           mpc_op_exec_->mPrev.recv(cols_2);
-      
+
         else if (party_id_ == (i + 2) % 3)
           mpc_op_exec_->mNext.recv(cols_1);
         else
@@ -476,7 +475,7 @@ int MissingProcess::execute() {
 
     for (auto iter = col_and_dtype_.begin(); iter != col_and_dtype_.end();
          iter++) {
-          //找到目标列
+      //找到目标列
       auto t = std::find(local_col_names.begin(), local_col_names.end(),
                          iter->first);
 
@@ -497,14 +496,13 @@ int MissingProcess::execute() {
       long int_min = LONG_MAX;
       double double_min = DBL_MAX;
       double double_max = DBL_MIN;
-      //0:avge 1:max 2:min
+      // 0:avge 1:max 2:min
       int process_type = 0;
       int col_index = -1;
       double double_col_max = 0;
       int64_t int_col_max = 0;
       double double_col_min = 0;
       int64_t int_col_min = 0;
-
 
       // For each column type of which maybe double or int64, read every row as
       // a string then try to convert string into int64 value or double value,
@@ -515,8 +513,8 @@ int MissingProcess::execute() {
         col_index = std::distance(local_col_names.begin(), t);
 
         //本地统计
-        //Integer Long
-      if (iter->second == 1 || iter->second == 3) {
+        // Integer Long
+        if (iter->second == 1 || iter->second == 3) {
           null_num = 0;
           int_count = 0;
           int_sum = 0;
@@ -527,7 +525,7 @@ int MissingProcess::execute() {
                     << " chunk(s), expect type is int64.";
 
           abnormal_index.resize(chunk_num);
-          //db形式的是如何找出错误值？
+          // db形式的是如何找出错误值？
           if (use_db) {
             for (int k = 0; k < chunk_num; k++) {
               auto value_array = std::static_pointer_cast<Int64Array>(
@@ -551,13 +549,13 @@ int MissingProcess::execute() {
               for (int64_t j = 0; j < str_array->length(); j++) {
                 if (str_array->IsNull(j)) {
                   LOG(WARNING) << "Find missing value in column " << iter->first
-                              << ", chunk " << k << ", index " << j << ".";
+                               << ", chunk " << k << ", index " << j << ".";
                   continue;
                 }
 
                 ret = _strToInt64(str_array->GetString(j), i64_val);
-                //convert fails
-                 LOG(INFO) << "Init int_min is  " << int_min << ".";                
+                // convert fails
+                LOG(INFO) << "Init int_min is  " << int_min << ".";
                 if (ret != 0) {
                   abnormal_num++;
                   abnormal_index[k].emplace_back(j);
@@ -566,8 +564,8 @@ int MissingProcess::execute() {
                       << "' in column " << iter->first << ", chunk " << k
                       << ", index " << j << ".";
                 } else {
-                  int_max = i64_val>int_max? i64_val:int_max;
-                  int_min = i64_val<int_min? i64_val:int_min;
+                  int_max = i64_val > int_max ? i64_val : int_max;
+                  int_min = i64_val < int_min ? i64_val : int_min;
                   int_sum += i64_val;
                 }
               }
@@ -576,8 +574,8 @@ int MissingProcess::execute() {
                   table->column(col_index)->chunk(k)->data()->GetNullCount();
             }
             int_count = table->num_rows() - null_num - abnormal_num;
-          }//double
-        }else if (iter->second == 2) {
+          } // double
+        } else if (iter->second == 2) {
           null_num = 0;
           double_count = 0;
           double_sum = 0;
@@ -612,7 +610,7 @@ int MissingProcess::execute() {
                 // LOG(INFO) << str_array->GetString(j);
                 if (str_array->IsNull(j)) {
                   LOG(WARNING) << "Find missing value in column " << iter->first
-                              << ", chunk " << k << ", index " << j << ".";
+                               << ", chunk " << k << ", index " << j << ".";
                   continue;
                 }
                 ret = _strToDouble(str_array->GetString(j), d_val);
@@ -625,8 +623,8 @@ int MissingProcess::execute() {
                       << ", index " << j << ".";
 
                 } else {
-                  double_max = d_val>double_max? d_val:double_max;
-                  double_min = d_val<double_min? d_val:double_min;
+                  double_max = d_val > double_max ? d_val : double_max;
+                  double_min = d_val < double_min ? d_val : double_min;
                   double_sum += d_val;
                 }
               }
@@ -638,65 +636,62 @@ int MissingProcess::execute() {
             double_count = table->num_rows() - null_num - abnormal_num;
           }
         }
-        //MPC
+        // MPC
         //.........................................................................................
         const Decimal myD = D16;
-        //1:max 2:min 3:avg
-        enum replace{
-          MAX,
-          MIN,
-          AVG
-        };
+        // 1:max 2:min 3:avg
+        enum replace { MAX, MIN, AVG };
         replace replace_type = MIN;
 
-        if(replace_type == MAX){
+        if (replace_type == MAX) {
           if (iter->second == 1 || iter->second == 3) {
             i64Matrix m(1, 1);
-      
+
             std::vector<bool> mpc_res;
 
             m(0, 0) = int_max;
-            LOG(INFO) << "The max of party" << party_id_ << " column is: "
-                       << int_max << ".";
+            LOG(INFO) << "The max of party" << party_id_
+                      << " column is: " << int_max << ".";
 
             sbMatrix sh_res;
-            //first compare:p0-p1 
-            if(party_id_!=2){
+            // first compare:p0-p1
+            if (party_id_ != 2) {
               mpc_op_exec_->MPC_Compare(m, sh_res);
-            }else{
+            } else {
               mpc_op_exec_->MPC_Compare(sh_res);
             }
-            
+
             i64Matrix tmp;
             tmp.resize(sh_res.rows(), sh_res.i64Cols());
-            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res,tmp).get();
-            for (size_t i = 0; i < tmp.rows(); i++){
+            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime, sh_res, tmp)
+                .get();
+            for (size_t i = 0; i < tmp.rows(); i++) {
               mpc_res.emplace_back(static_cast<bool>(tmp(i, 0)));
             }
-            LOG(INFO) << "Second: The revealed sh_res is " << tmp << ".";  
+            LOG(INFO) << "Second: The revealed sh_res is " << tmp << ".";
             LOG(INFO) << "Second: The mpc_res is " << mpc_res[0] << ".";
-            //second compare
-            //0:p0 is greater
-            //1:p1 is greater
-            //2:p2
+            // second compare
+            // 0:p0 is greater
+            // 1:p1 is greater
+            // 2:p2
             int flag = 0;
             sbMatrix sh_res2;
-            for(int i=0; i<mpc_res.size(); i++){
-              //p0<p1
-              if(mpc_res[i]){
+            for (int i = 0; i < mpc_res.size(); i++) {
+              // p0<p1
+              if (mpc_res[i]) {
                 flag = 1;
-                //p1-p2
-                if(party_id_!=0){
+                // p1-p2
+                if (party_id_ != 0) {
                   mpc_op_exec_->MPC_Compare(m, sh_res2);
-                }else{
+                } else {
                   mpc_op_exec_->MPC_Compare(sh_res2);
                 }
-              }else{
+              } else {
                 flag = 0;
-                //p0-p2
-                if(party_id_!=1){
+                // p0-p2
+                if (party_id_ != 1) {
                   mpc_op_exec_->MPC_Compare(m, sh_res2);
-                }else{
+                } else {
                   mpc_op_exec_->MPC_Compare(sh_res2);
                 }
               }
@@ -705,47 +700,47 @@ int MissingProcess::execute() {
             std::vector<bool> mpc_res2;
             i64Matrix tmp2;
             tmp2.resize(sh_res2.rows(), sh_res2.i64Cols());
-            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res2,tmp2).get();
-            for (size_t i = 0; i < tmp2.rows(); i++){
+            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime, sh_res2, tmp2)
+                .get();
+            for (size_t i = 0; i < tmp2.rows(); i++) {
               mpc_res2.emplace_back(static_cast<bool>(tmp2(i, 0)));
             }
-        
-            LOG(INFO) << "Second: The revealed sh_res2 is " << tmp2 << ".";  
+
+            LOG(INFO) << "Second: The revealed sh_res2 is " << tmp2 << ".";
             LOG(INFO) << "Second: The mpc_res2 is " << mpc_res2[0] << ".";
 
             si64Matrix sh_max;
-            sh_max.resize(m.rows(),m.cols());
-            for(int i=0; i<mpc_res2.size(); i++){
-              //max is p2
-              if(mpc_res2[i]){
+            sh_max.resize(m.rows(), m.cols());
+            for (int i = 0; i < mpc_res2.size(); i++) {
+              // max is p2
+              if (mpc_res2[i]) {
                 flag = 2;
-                if(party_id_==2){
+                if (party_id_ == 2) {
                   mpc_op_exec_->createShares(m, sh_max);
-                }else{
+                } else {
                   mpc_op_exec_->createShares(sh_max);
                 }
-              }else{
-                //max is p0 or p1
-                if(flag==0){
-                  if(party_id_==0){
+              } else {
+                // max is p0 or p1
+                if (flag == 0) {
+                  if (party_id_ == 0) {
                     mpc_op_exec_->createShares(m, sh_max);
-                  }else{
+                  } else {
                     mpc_op_exec_->createShares(sh_max);
-                 }
-                }else if(flag==1){
-                  if(party_id_==1){
+                  }
+                } else if (flag == 1) {
+                  if (party_id_ == 1) {
                     mpc_op_exec_->createShares(m, sh_max);
-                 }else{
-                  mpc_op_exec_->createShares(sh_max);
-                 }
+                  } else {
+                    mpc_op_exec_->createShares(sh_max);
+                  }
                 }
               }
               i64Matrix plain_max(1, 1);
               plain_max = mpc_op_exec_->revealAll(sh_max);
-              LOG(WARNING) << "The max value is " << plain_max
-                          << " in column " << flag<< ".";
-              int_col_max = plain_max(0,0);
-              
+              LOG(WARNING) << "The max value is " << plain_max << " in column "
+                           << flag << ".";
+              int_col_max = plain_max(0, 0);
             }
 
             std::shared_ptr<arrow::Array> new_array;
@@ -781,197 +776,200 @@ int MissingProcess::execute() {
             table = result.ValueOrDie();
             LOG(INFO) << "Finish.";
             //.............................................
-          //  f64Matrix<myD> m(1, 1);
-      
-          //   std::vector<bool> mpc_res;
+            //  f64Matrix<myD> m(1, 1);
 
-          //   m(0, 0) = (double)int_max;
-          //   LOG(INFO) << "The max of party" << party_id_ << " column is: "
-          //             << int_max << ".";
+            //   std::vector<bool> mpc_res;
 
-          //   sbMatrix sh_res;
-          //   //first compare:p0-p1 
-          //   if(party_id_!=2){
-          //     mpc_op_exec_->MPC_Compare(m, sh_res);
-          //   }else{
-          //     mpc_op_exec_->MPC_Compare(sh_res);
-          //   }
-          //   LOG(INFO) << "The first compare is completely. ";      
-  
-          //   i64Matrix tmp;
-          //   tmp.resize(sh_res.rows(), sh_res.i64Cols());
-          //   mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res,tmp).get();
-          //   for (size_t i = 0; i < tmp.rows(); i++){
-          //     mpc_res.emplace_back(static_cast<bool>(tmp(i, 0)));
-          //   }
-        
-          //   LOG(INFO) << "First: the revealed sh_res is " << tmp << ".";  
-          //   LOG(INFO) << "First: The mpc_res is " << mpc_res[0] << ".";       
+            //   m(0, 0) = (double)int_max;
+            //   LOG(INFO) << "The max of party" << party_id_ << " column is: "
+            //             << int_max << ".";
 
+            //   sbMatrix sh_res;
+            //   //first compare:p0-p1
+            //   if(party_id_!=2){
+            //     mpc_op_exec_->MPC_Compare(m, sh_res);
+            //   }else{
+            //     mpc_op_exec_->MPC_Compare(sh_res);
+            //   }
+            //   LOG(INFO) << "The first compare is completely. ";
 
-          //   //second compare
-          //   //0:p0 is greater 
-          //   //1:p1 is greater
-          //   //2:p2
-          //   int flag = 0;
-          //   sbMatrix sh_res2;
-          //   for(int i=0; i<mpc_res.size(); i++){
-          //     //p0<p1
-          //     if(mpc_res[i]){
-          //       flag = 1;
-          //       //p1-p2
-          //       if(party_id_!=0){
-          //         mpc_op_exec_->MPC_Compare(m, sh_res2);
-          //       }else{
-          //         mpc_op_exec_->MPC_Compare(sh_res2);
-          //       }
-          //     }
-          //     //p0>=p1
-          //     else{
-          //       flag = 0;
-          //       //p0-p2
-          //       if(party_id_!=1){
-          //         mpc_op_exec_->MPC_Compare(m, sh_res2);
-          //       }else{
-          //         mpc_op_exec_->MPC_Compare(sh_res2);
-          //       }
-          //     }
-          //   }
+            //   i64Matrix tmp;
+            //   tmp.resize(sh_res.rows(), sh_res.i64Cols());
+            //   mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res,tmp).get();
+            //   for (size_t i = 0; i < tmp.rows(); i++){
+            //     mpc_res.emplace_back(static_cast<bool>(tmp(i, 0)));
+            //   }
 
-          //   std::vector<bool> mpc_res2;
-          //   i64Matrix tmp2;
-          //   tmp2.resize(sh_res2.rows(), sh_res2.i64Cols());
-          //   mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res2,tmp2).get();
-          //   for (size_t i = 0; i < tmp2.rows(); i++){
-          //     mpc_res2.emplace_back(static_cast<bool>(tmp2(i, 0)));
-          //   }
-        
-          //   LOG(INFO) << "Second: The revealed sh_res is " << tmp2 << ".";  
-          //   LOG(INFO) << "Second: The mpc_res2 is " << mpc_res2[0] << ".";
+            //   LOG(INFO) << "First: the revealed sh_res is " << tmp << ".";
+            //   LOG(INFO) << "First: The mpc_res is " << mpc_res[0] << ".";
 
-          //   sf64Matrix<myD> sh_max;
-          //   sh_max.resize(m.rows(), m.cols());
-          //   for(int i=0; i<mpc_res2.size(); i++){
-          //     //max is p2
-          //     if(mpc_res2[i]){
-          //       flag = 2;
-          //       if(party_id_==2){
-          //         mpc_op_exec_->createShares(m, sh_max);
-          //       }else{
-          //         mpc_op_exec_->createShares(sh_max);
-          //       }
-          //     }else{
-          //       //max is p0 or p1
-          //       if(flag==0){
-          //         if(party_id_==0){
-          //           mpc_op_exec_->createShares(m, sh_max);
-          //         }else{
-          //           mpc_op_exec_->createShares(sh_max);
-          //       }
-          //       }else if(flag==1){
-          //         if(party_id_==1){
-          //           mpc_op_exec_->createShares(m, sh_max);
-          //       }else{
-          //         mpc_op_exec_->createShares(sh_max);
-          //       }
-          //       }
-          //     }
-          //     eMatrix<double> plain_max(1, 1);
-          //     plain_max = mpc_op_exec_->revealAll(sh_max);
-          //     LOG(WARNING) << "The max value is " << plain_max
-          //                 << " in column " << flag<< ".";
-          //     int_col_max = (int64_t)plain_max(0,0);
-              
-          //   }
+            //   //second compare
+            //   //0:p0 is greater
+            //   //1:p1 is greater
+            //   //2:p2
+            //   int flag = 0;
+            //   sbMatrix sh_res2;
+            //   for(int i=0; i<mpc_res.size(); i++){
+            //     //p0<p1
+            //     if(mpc_res[i]){
+            //       flag = 1;
+            //       //p1-p2
+            //       if(party_id_!=0){
+            //         mpc_op_exec_->MPC_Compare(m, sh_res2);
+            //       }else{
+            //         mpc_op_exec_->MPC_Compare(sh_res2);
+            //       }
+            //     }
+            //     //p0>=p1
+            //     else{
+            //       flag = 0;
+            //       //p0-p2
+            //       if(party_id_!=1){
+            //         mpc_op_exec_->MPC_Compare(m, sh_res2);
+            //       }else{
+            //         mpc_op_exec_->MPC_Compare(sh_res2);
+            //       }
+            //     }
+            //   }
 
+            //   std::vector<bool> mpc_res2;
+            //   i64Matrix tmp2;
+            //   tmp2.resize(sh_res2.rows(), sh_res2.i64Cols());
+            //   mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res2,tmp2).get();
+            //   for (size_t i = 0; i < tmp2.rows(); i++){
+            //     mpc_res2.emplace_back(static_cast<bool>(tmp2(i, 0)));
+            //   }
 
-          //   std::shared_ptr<arrow::Array> new_array;
-          //   if (use_db) {
-          //     _buildNewColumn(table, col_index, std::to_string(int_col_max),
-          //                     db_both_index[iter->first], false, new_array);
-          //   } else {
-          //     _buildNewColumn(table, col_index, std::to_string(int_col_max),
-          //                     abnormal_index, false, new_array);
-          //   }
-          //   std::shared_ptr<arrow::ChunkedArray> chunk_array =
-          //       std::make_shared<arrow::ChunkedArray>(new_array);
-          //   std::shared_ptr<arrow::Field> field =
-          //       std::make_shared<arrow::Field>(iter->first, arrow::int64());
+            //   LOG(INFO) << "Second: The revealed sh_res is " << tmp2 << ".";
+            //   LOG(INFO) << "Second: The mpc_res2 is " << mpc_res2[0] << ".";
 
-          //   LOG(INFO) << "Replace column " << iter->first
-          //             << " with new array in table.";
+            //   sf64Matrix<myD> sh_max;
+            //   sh_max.resize(m.rows(), m.cols());
+            //   for(int i=0; i<mpc_res2.size(); i++){
+            //     //max is p2
+            //     if(mpc_res2[i]){
+            //       flag = 2;
+            //       if(party_id_==2){
+            //         mpc_op_exec_->createShares(m, sh_max);
+            //       }else{
+            //         mpc_op_exec_->createShares(sh_max);
+            //       }
+            //     }else{
+            //       //max is p0 or p1
+            //       if(flag==0){
+            //         if(party_id_==0){
+            //           mpc_op_exec_->createShares(m, sh_max);
+            //         }else{
+            //           mpc_op_exec_->createShares(sh_max);
+            //       }
+            //       }else if(flag==1){
+            //         if(party_id_==1){
+            //           mpc_op_exec_->createShares(m, sh_max);
+            //       }else{
+            //         mpc_op_exec_->createShares(sh_max);
+            //       }
+            //       }
+            //     }
+            //     eMatrix<double> plain_max(1, 1);
+            //     plain_max = mpc_op_exec_->revealAll(sh_max);
+            //     LOG(WARNING) << "The max value is " << plain_max
+            //                 << " in column " << flag<< ".";
+            //     int_col_max = (int64_t)plain_max(0,0);
 
-          //   LOG(INFO) << "col_index:" << col_index;
-          //   LOG(INFO) << "name:" << field->name();
-          //   LOG(INFO) << "type:" << field->type();
-          //   LOG(INFO) << "table->type:" << table->field(col_index)->type();
+            //   }
 
-          //   auto result = table->SetColumn(col_index, field, chunk_array);
-          //   if (!result.ok()) {
-          //     std::stringstream ss;
-          //     ss << "Replace content of column " << iter->first << " failed, "
-          //       << result.status();
-          //     LOG(ERROR) << ss.str();
-          //     throw std::runtime_error(ss.str());
-          //   }
+            //   std::shared_ptr<arrow::Array> new_array;
+            //   if (use_db) {
+            //     _buildNewColumn(table, col_index,
+            //     std::to_string(int_col_max),
+            //                     db_both_index[iter->first], false,
+            //                     new_array);
+            //   } else {
+            //     _buildNewColumn(table, col_index,
+            //     std::to_string(int_col_max),
+            //                     abnormal_index, false, new_array);
+            //   }
+            //   std::shared_ptr<arrow::ChunkedArray> chunk_array =
+            //       std::make_shared<arrow::ChunkedArray>(new_array);
+            //   std::shared_ptr<arrow::Field> field =
+            //       std::make_shared<arrow::Field>(iter->first,
+            //       arrow::int64());
 
-          //   table = result.ValueOrDie();
-          //   LOG(INFO) << "Finish.";
+            //   LOG(INFO) << "Replace column " << iter->first
+            //             << " with new array in table.";
+
+            //   LOG(INFO) << "col_index:" << col_index;
+            //   LOG(INFO) << "name:" << field->name();
+            //   LOG(INFO) << "type:" << field->type();
+            //   LOG(INFO) << "table->type:" << table->field(col_index)->type();
+
+            //   auto result = table->SetColumn(col_index, field, chunk_array);
+            //   if (!result.ok()) {
+            //     std::stringstream ss;
+            //     ss << "Replace content of column " << iter->first << "
+            //     failed, "
+            //       << result.status();
+            //     LOG(ERROR) << ss.str();
+            //     throw std::runtime_error(ss.str());
+            //   }
+
+            //   table = result.ValueOrDie();
+            //   LOG(INFO) << "Finish.";
             //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             //++++++++++++++++++++++++++++++++++++++Double+++++++++++++++++++++++++++++++++++++++++++++++
           } else if (iter->second == 2) {
             f64Matrix<myD> m(1, 1);
-      
+
             std::vector<bool> mpc_res;
 
             m(0, 0) = double_max;
-            LOG(INFO) << "The max of party" << party_id_ << " column is: "
-                      << double_max << ".";
+            LOG(INFO) << "The max of party" << party_id_
+                      << " column is: " << double_max << ".";
 
             sbMatrix sh_res;
-            //first compare:p0-p1 
-            if(party_id_!=2){
+            // first compare:p0-p1
+            if (party_id_ != 2) {
               mpc_op_exec_->MPC_Compare(m, sh_res);
-            }else{
+            } else {
               mpc_op_exec_->MPC_Compare(sh_res);
             }
-            LOG(INFO) << "The first compare is completely. ";      
-  
+            LOG(INFO) << "The first compare is completely. ";
+
             i64Matrix tmp;
             tmp.resize(sh_res.rows(), sh_res.i64Cols());
-            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res,tmp).get();
-            for (size_t i = 0; i < tmp.rows(); i++){
+            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime, sh_res, tmp)
+                .get();
+            for (size_t i = 0; i < tmp.rows(); i++) {
               mpc_res.emplace_back(static_cast<bool>(tmp(i, 0)));
             }
-        
-            LOG(INFO) << "First: the revealed sh_res is " << tmp << ".";  
-            LOG(INFO) << "First: The mpc_res is " << mpc_res[0] << ".";       
 
+            LOG(INFO) << "First: the revealed sh_res is " << tmp << ".";
+            LOG(INFO) << "First: The mpc_res is " << mpc_res[0] << ".";
 
-            //second compare
-            //0:p0 is greater 
-            //1:p1 is greater
-            //2:p2
+            // second compare
+            // 0:p0 is greater
+            // 1:p1 is greater
+            // 2:p2
             int flag = 0;
             sbMatrix sh_res2;
-            for(int i=0; i<mpc_res.size(); i++){
-              //p0<p1
-              if(mpc_res[i]){
+            for (int i = 0; i < mpc_res.size(); i++) {
+              // p0<p1
+              if (mpc_res[i]) {
                 flag = 1;
-                //p1-p2
-                if(party_id_!=0){
+                // p1-p2
+                if (party_id_ != 0) {
                   mpc_op_exec_->MPC_Compare(m, sh_res2);
-                }else{
+                } else {
                   mpc_op_exec_->MPC_Compare(sh_res2);
                 }
               }
-              //p0>=p1
-              else{
+              // p0>=p1
+              else {
                 flag = 0;
-                //p0-p2
-                if(party_id_!=1){
+                // p0-p2
+                if (party_id_ != 1) {
                   mpc_op_exec_->MPC_Compare(m, sh_res2);
-                }else{
+                } else {
                   mpc_op_exec_->MPC_Compare(sh_res2);
                 }
               }
@@ -980,50 +978,50 @@ int MissingProcess::execute() {
             std::vector<bool> mpc_res2;
             i64Matrix tmp2;
             tmp2.resize(sh_res2.rows(), sh_res2.i64Cols());
-            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res2,tmp2).get();
-            for (size_t i = 0; i < tmp2.rows(); i++){
+            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime, sh_res2, tmp2)
+                .get();
+            for (size_t i = 0; i < tmp2.rows(); i++) {
               mpc_res2.emplace_back(static_cast<bool>(tmp2(i, 0)));
             }
-        
-            LOG(INFO) << "Second: The revealed sh_res is " << tmp2 << ".";  
+
+            LOG(INFO) << "Second: The revealed sh_res is " << tmp2 << ".";
             LOG(INFO) << "Second: The mpc_res2 is " << mpc_res2[0] << ".";
 
             sf64Matrix<myD> sh_max;
             sh_max.resize(m.rows(), m.cols());
-            for(int i=0; i<mpc_res2.size(); i++){
-              //max is p2
-              if(mpc_res2[i]){
+            for (int i = 0; i < mpc_res2.size(); i++) {
+              // max is p2
+              if (mpc_res2[i]) {
                 flag = 2;
-                if(party_id_==2){
+                if (party_id_ == 2) {
                   mpc_op_exec_->createShares(m, sh_max);
-                }else{
+                } else {
                   mpc_op_exec_->createShares(sh_max);
                 }
-              }else{
-                //max is p0 or p1
-                if(flag==0){
-                  if(party_id_==0){
+              } else {
+                // max is p0 or p1
+                if (flag == 0) {
+                  if (party_id_ == 0) {
                     mpc_op_exec_->createShares(m, sh_max);
-                  }else{
+                  } else {
                     mpc_op_exec_->createShares(sh_max);
-                }
-                }else if(flag==1){
-                  if(party_id_==1){
+                  }
+                } else if (flag == 1) {
+                  if (party_id_ == 1) {
                     mpc_op_exec_->createShares(m, sh_max);
-                }else{
-                  mpc_op_exec_->createShares(sh_max);
-                }
+                  } else {
+                    mpc_op_exec_->createShares(sh_max);
+                  }
                 }
               }
               eMatrix<double> plain_max(1, 1);
               plain_max = mpc_op_exec_->revealAll(sh_max);
-              LOG(WARNING) << "The max value is " << plain_max
-                          << " in column " << flag<< ".";
-              double_col_max = plain_max(0,0);
-              
+              LOG(WARNING) << "The max value is " << plain_max << " in column "
+                           << flag << ".";
+              double_col_max = plain_max(0, 0);
             }
 
-          std::shared_ptr<arrow::Array> new_array;
+            std::shared_ptr<arrow::Array> new_array;
             if (use_db) {
               _buildNewColumn(table, col_index, std::to_string(double_col_max),
                               db_both_index[iter->first], true, new_array);
@@ -1043,64 +1041,65 @@ int MissingProcess::execute() {
             if (!result.ok()) {
               std::stringstream ss;
               ss << "Replace content of column " << iter->first << " failed, "
-                << result.status();
+                 << result.status();
               LOG(ERROR) << ss.str();
               throw std::runtime_error(ss.str());
             }
 
             table = result.ValueOrDie();
             LOG(INFO) << "Finish.";
-          }else {
-          LOG(ERROR) << "Can't find value of column " << iter->first << ".";
-        }
-      }else if(replace_type == MIN){
-         if (iter->second == 1 || iter->second == 3) {
-             i64Matrix m(1, 1);
-      
+          } else {
+            LOG(ERROR) << "Can't find value of column " << iter->first << ".";
+          }
+        } else if (replace_type == MIN) {
+          if (iter->second == 1 || iter->second == 3) {
+            i64Matrix m(1, 1);
+
             std::vector<bool> mpc_res;
 
             m(0, 0) = int_min;
-            LOG(INFO) << "The min of party" << party_id_ << " column is: "
-                       << int_min << ".";
+            LOG(INFO) << "The min of party" << party_id_
+                      << " column is: " << int_min << ".";
 
             sbMatrix sh_res;
-            //first compare:p0-p1 
-            if(party_id_!=2){
+            // first compare:p0-p1
+            if (party_id_ != 2) {
               mpc_op_exec_->MPC_Compare(m, sh_res);
-            }else{
+            } else {
               mpc_op_exec_->MPC_Compare(sh_res);
             }
-            
+
             i64Matrix tmp;
             tmp.resize(sh_res.rows(), sh_res.i64Cols());
-            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res,tmp).get();
-            for (size_t i = 0; i < tmp.rows(); i++){
+            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime, sh_res, tmp)
+                .get();
+            for (size_t i = 0; i < tmp.rows(); i++) {
               mpc_res.emplace_back(static_cast<bool>(tmp(i, 0)));
             }
-            LOG(INFO) << "Second: The revealed sh_res is " << tmp << ".";  
+            LOG(INFO) << "Second: The revealed sh_res is " << tmp << ".";
             LOG(INFO) << "Second: The mpc_res is " << mpc_res[0] << ".";
-            //second compare
-            //0:p0 is greater
-            //1:p1 is greater
-            //2:p2
+            // second compare
+            // 0:p0 is greater
+            // 1:p1 is greater
+            // 2:p2
             int flag = 0;
             sbMatrix sh_res2;
-            for(int i=0; i<mpc_res.size(); i++){
-              //p0<p1
-              if(!mpc_res[i]){
+            for (int i = 0; i < mpc_res.size(); i++) {
+              // p0<p1
+              if (!mpc_res[i]) {
                 flag = 1;
-                //p1-p2
-                if(party_id_!=0){
+                // p1-p2
+                if (party_id_ != 0) {
                   mpc_op_exec_->MPC_Compare(m, sh_res2);
-                }else{
+                } else {
                   mpc_op_exec_->MPC_Compare(sh_res2);
                 }
-              }else{
+              } else {
                 flag = 0;
-                //p0-p2
-                if(party_id_!=1){
+                // p0-p2
+                if (party_id_ != 1) {
                   mpc_op_exec_->MPC_Compare(m, sh_res2);
-                }else{
+                } else {
                   mpc_op_exec_->MPC_Compare(sh_res2);
                 }
               }
@@ -1109,50 +1108,49 @@ int MissingProcess::execute() {
             std::vector<bool> mpc_res2;
             i64Matrix tmp2;
             tmp2.resize(sh_res2.rows(), sh_res2.i64Cols());
-            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res2,tmp2).get();
-            for (size_t i = 0; i < tmp2.rows(); i++){
+            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime, sh_res2, tmp2)
+                .get();
+            for (size_t i = 0; i < tmp2.rows(); i++) {
               mpc_res2.emplace_back(static_cast<bool>(tmp2(i, 0)));
             }
-        
-            LOG(INFO) << "Second: The revealed sh_res2 is " << tmp2 << ".";  
+
+            LOG(INFO) << "Second: The revealed sh_res2 is " << tmp2 << ".";
             LOG(INFO) << "Second: The mpc_res2 is " << mpc_res2[0] << ".";
 
             si64Matrix sh_min;
-            sh_min.resize(m.rows(),m.cols());
-            
-            for(int i=0; i<mpc_res2.size(); i++){
-              //min is p2
-              if(!mpc_res2[i]){
+            sh_min.resize(m.rows(), m.cols());
+
+            for (int i = 0; i < mpc_res2.size(); i++) {
+              // min is p2
+              if (!mpc_res2[i]) {
                 flag = 2;
-                if(party_id_==2){
+                if (party_id_ == 2) {
                   mpc_op_exec_->createShares(m, sh_min);
-                }else{
+                } else {
                   mpc_op_exec_->createShares(sh_min);
                 }
-              }else{
-                //min is p0 or p1
-                if(flag==0){
-                  if(party_id_==0){
+              } else {
+                // min is p0 or p1
+                if (flag == 0) {
+                  if (party_id_ == 0) {
                     mpc_op_exec_->createShares(m, sh_min);
-                  }else{
+                  } else {
                     mpc_op_exec_->createShares(sh_min);
-                 }
-                }else if(flag==1){
-                  if(party_id_==1){
+                  }
+                } else if (flag == 1) {
+                  if (party_id_ == 1) {
                     mpc_op_exec_->createShares(m, sh_min);
-                 }else{
-                  mpc_op_exec_->createShares(sh_min);
-                 }
+                  } else {
+                    mpc_op_exec_->createShares(sh_min);
+                  }
                 }
               }
               i64Matrix plain_min(1, 1);
               plain_min = mpc_op_exec_->revealAll(sh_min);
-              LOG(WARNING) << "The max value is " << plain_min
-                          << " in column " << flag<< ".";
-              int_col_min = plain_min(0,0);
-              
+              LOG(WARNING) << "The max value is " << plain_min << " in column "
+                           << flag << ".";
+              int_col_min = plain_min(0, 0);
             }
-
 
             std::shared_ptr<arrow::Array> new_array;
             if (use_db) {
@@ -1179,7 +1177,7 @@ int MissingProcess::execute() {
             if (!result.ok()) {
               std::stringstream ss;
               ss << "Replace content of column " << iter->first << " failed, "
-                << result.status();
+                 << result.status();
               LOG(ERROR) << ss.str();
               throw std::runtime_error(ss.str());
             }
@@ -1190,58 +1188,58 @@ int MissingProcess::execute() {
             //++++++++++++++++++++++++++++++++++++++Double+++++++++++++++++++++++++++++++++++++++++++++++
           } else if (iter->second == 2) {
             f64Matrix<myD> m(1, 1);
-      
+
             std::vector<bool> mpc_res;
 
             m(0, 0) = double_min;
 
-            LOG(INFO) << "The min of party" << party_id_ << " column is: "
-                      << double_min << ".";
+            LOG(INFO) << "The min of party" << party_id_
+                      << " column is: " << double_min << ".";
 
             sbMatrix sh_res;
-            //first compare:p0-p1 
-            if(party_id_!=2){
+            // first compare:p0-p1
+            if (party_id_ != 2) {
               mpc_op_exec_->MPC_Compare(m, sh_res);
-            }else{
+            } else {
               mpc_op_exec_->MPC_Compare(sh_res);
             }
-            LOG(INFO) << "The first compare is completely. ";      
+            LOG(INFO) << "The first compare is completely. ";
 
             i64Matrix tmp;
             tmp.resize(sh_res.rows(), sh_res.i64Cols());
-            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res,tmp).get();
-            for (size_t i = 0; i < tmp.rows(); i++){
+            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime, sh_res, tmp)
+                .get();
+            for (size_t i = 0; i < tmp.rows(); i++) {
               mpc_res.emplace_back(static_cast<bool>(tmp(i, 0)));
             }
-        
-            LOG(INFO) << "First: the revealed sh_res is " << tmp << ".";  
-            LOG(INFO) << "First: The mpc_res is " << mpc_res[0] << ".";       
 
+            LOG(INFO) << "First: the revealed sh_res is " << tmp << ".";
+            LOG(INFO) << "First: The mpc_res is " << mpc_res[0] << ".";
 
-            //second compare
-            //0:p0 is greater 
-            //1:p1 is greater
-            //2:p2
+            // second compare
+            // 0:p0 is greater
+            // 1:p1 is greater
+            // 2:p2
             int flag = 0;
             sbMatrix sh_res2;
-            for(int i=0; i<mpc_res.size(); i++){  
-              //p0>=p1
-              if(!mpc_res[i]){
+            for (int i = 0; i < mpc_res.size(); i++) {
+              // p0>=p1
+              if (!mpc_res[i]) {
                 flag = 1;
-                //p1-p2
-                if(party_id_!=0){
+                // p1-p2
+                if (party_id_ != 0) {
                   mpc_op_exec_->MPC_Compare(m, sh_res2);
-                }else{
+                } else {
                   mpc_op_exec_->MPC_Compare(sh_res2);
                 }
               }
-              //p0<p1
-              else{
+              // p0<p1
+              else {
                 flag = 0;
-                //p0-p2
-                if(party_id_!=1){
+                // p0-p2
+                if (party_id_ != 1) {
                   mpc_op_exec_->MPC_Compare(m, sh_res2);
-                }else{
+                } else {
                   mpc_op_exec_->MPC_Compare(sh_res2);
                 }
               }
@@ -1250,50 +1248,50 @@ int MissingProcess::execute() {
             std::vector<bool> mpc_res2;
             i64Matrix tmp2;
             tmp2.resize(sh_res2.rows(), sh_res2.i64Cols());
-            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res2,tmp2).get();
-            for (size_t i = 0; i < tmp2.rows(); i++){
+            mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime, sh_res2, tmp2)
+                .get();
+            for (size_t i = 0; i < tmp2.rows(); i++) {
               mpc_res2.emplace_back(static_cast<bool>(tmp2(i, 0)));
             }
-        
-            LOG(INFO) << "Second: The revealed sh_res is " << tmp2 << ".";  
+
+            LOG(INFO) << "Second: The revealed sh_res is " << tmp2 << ".";
             LOG(INFO) << "Second: The mpc_res2 is " << mpc_res2[0] << ".";
 
             sf64Matrix<myD> sh_min;
             sh_min.resize(m.rows(), m.cols());
-            for(int i=0; i<mpc_res2.size(); i++){
-              //min is p2
-              if(!mpc_res2[i]){
+            for (int i = 0; i < mpc_res2.size(); i++) {
+              // min is p2
+              if (!mpc_res2[i]) {
                 flag = 2;
-                if(party_id_==2){
+                if (party_id_ == 2) {
                   mpc_op_exec_->createShares(m, sh_min);
-                }else{
+                } else {
                   mpc_op_exec_->createShares(sh_min);
                 }
-              }else{
-                //min is p0 or p1
-                if(flag==0){
-                  if(party_id_==0){
+              } else {
+                // min is p0 or p1
+                if (flag == 0) {
+                  if (party_id_ == 0) {
                     mpc_op_exec_->createShares(m, sh_min);
-                  }else{
+                  } else {
                     mpc_op_exec_->createShares(sh_min);
-                }
-                }else if(flag==1){
-                  if(party_id_==1){
+                  }
+                } else if (flag == 1) {
+                  if (party_id_ == 1) {
                     mpc_op_exec_->createShares(m, sh_min);
-                }else{
-                  mpc_op_exec_->createShares(sh_min);
-                }
+                  } else {
+                    mpc_op_exec_->createShares(sh_min);
+                  }
                 }
               }
               eMatrix<double> plain_min(1, 1);
               plain_min = mpc_op_exec_->revealAll(sh_min);
-              LOG(WARNING) << "The min value is " << plain_min
-                          << " in column " << flag<< ".";
-              double_col_min = plain_min(0,0);
-              
+              LOG(WARNING) << "The min value is " << plain_min << " in column "
+                           << flag << ".";
+              double_col_min = plain_min(0, 0);
             }
 
-          std::shared_ptr<arrow::Array> new_array;
+            std::shared_ptr<arrow::Array> new_array;
             if (use_db) {
               _buildNewColumn(table, col_index, std::to_string(double_col_min),
                               db_both_index[iter->first], true, new_array);
@@ -1313,162 +1311,162 @@ int MissingProcess::execute() {
             if (!result.ok()) {
               std::stringstream ss;
               ss << "Replace content of column " << iter->first << " failed, "
-                << result.status();
+                 << result.status();
               LOG(ERROR) << ss.str();
               throw std::runtime_error(ss.str());
             }
 
             table = result.ValueOrDie();
             LOG(INFO) << "Finish.";
-          }else {
-          LOG(ERROR) << "Can't find value of column " << iter->first << ".";
-        }
-      }else if(replace_type == AVG){
-        if (iter->second == 1 || iter->second == 3) {
-          i64Matrix m(2, 1);
-          m(0, 0) = int_sum;
-          m(1, 0) = int_count;
-
-          LOG(INFO) << "Local column: sum " << int_sum << ", count "
-                    << int_count << ".";
-
-          si64Matrix sh_m[3];
-          for (uint8_t i = 0; i < 3; i++) {
-            if (i == party_id_) {
-              sh_m[i].resize(2, 1);
-              mpc_op_exec_->createShares(m, sh_m[i]);
-            } else {
-              sh_m[i].resize(2, 1);
-              mpc_op_exec_->createShares(sh_m[i]);
-            }
-          }
-
-          si64Matrix sh_sum(2, 1);
-          sh_sum = sh_m[0];
-          for (uint8_t i = 1; i < 3; i++)
-            sh_sum = sh_sum + sh_m[i];
-
-          LOG(INFO) << "Run MPC sum to get sum of all party.";
-
-          i64Matrix plain_sum(2, 1);
-          plain_sum = mpc_op_exec_->revealAll(sh_sum);
-
-          LOG(INFO) << "Sum of column in all party is " << plain_sum(0, 0)
-                    << ", sum of count in all party is " << plain_sum(1, 0)
-                    << ".";
-
-          LOG(INFO) << "Build new array to save column value, missing and "
-                       "abnormal value will be replaced by average value.";
-
-          // Update value in position that have null or abormal value with
-          // average value.
-          int64_t col_avg = plain_sum(0, 0) / plain_sum(1, 0);
-          std::shared_ptr<arrow::Array> new_array;
-          if (use_db) {
-            _buildNewColumn(table, col_index, std::to_string(col_avg),
-                            db_both_index[iter->first], false, new_array);
           } else {
-            _buildNewColumn(table, col_index, std::to_string(col_avg),
-                            abnormal_index, false, new_array);
+            LOG(ERROR) << "Can't find value of column " << iter->first << ".";
           }
-          std::shared_ptr<arrow::ChunkedArray> chunk_array =
-              std::make_shared<arrow::ChunkedArray>(new_array);
-          std::shared_ptr<arrow::Field> field =
-              std::make_shared<arrow::Field>(iter->first, arrow::int64());
+        } else if (replace_type == AVG) {
+          if (iter->second == 1 || iter->second == 3) {
+            i64Matrix m(2, 1);
+            m(0, 0) = int_sum;
+            m(1, 0) = int_count;
 
-          LOG(INFO) << "Replace column " << iter->first
-                    << " with new array in table.";
+            LOG(INFO) << "Local column: sum " << int_sum << ", count "
+                      << int_count << ".";
 
-          LOG(INFO) << "col_index:" << col_index;
-          LOG(INFO) << "name:" << field->name();
-          LOG(INFO) << "type:" << field->type();
-          LOG(INFO) << "table->type:" << table->field(col_index)->type();
-
-          auto result = table->SetColumn(col_index, field, chunk_array);
-          if (!result.ok()) {
-            std::stringstream ss;
-            ss << "Replace content of column " << iter->first << " failed, "
-               << result.status();
-            LOG(ERROR) << ss.str();
-            throw std::runtime_error(ss.str());
-          }
-
-          table = result.ValueOrDie();
-          LOG(INFO) << "Finish.";
-        } else if (iter->second == 2) {
-          eMatrix<double> m(2, 1);
-          m(0, 0) = double_sum;
-          m(1, 0) = double_count;
-
-          LOG(INFO) << "Local column: sum " << double_sum << ", count "
-                    << double_count << ".";
-
-          sf64Matrix<D16> sh_m[3];
-          for (uint8_t i = 0; i < 3; i++) {
-            if (i == party_id_) {
-              sh_m[i].resize(2, 1);
-              mpc_op_exec_->createShares(m, sh_m[i]);
-            } else {
-              sh_m[i].resize(2, 1);
-              mpc_op_exec_->createShares(sh_m[i]);
+            si64Matrix sh_m[3];
+            for (uint8_t i = 0; i < 3; i++) {
+              if (i == party_id_) {
+                sh_m[i].resize(2, 1);
+                mpc_op_exec_->createShares(m, sh_m[i]);
+              } else {
+                sh_m[i].resize(2, 1);
+                mpc_op_exec_->createShares(sh_m[i]);
+              }
             }
-          }
 
-          sf64Matrix<D16> sh_sum;
-          sh_sum = sh_m[0];
-          for (int j = 1; j < 3; j++)
-            sh_sum = sh_sum + sh_m[j];
+            si64Matrix sh_sum(2, 1);
+            sh_sum = sh_m[0];
+            for (uint8_t i = 1; i < 3; i++)
+              sh_sum = sh_sum + sh_m[i];
 
-          LOG(INFO) << "Run MPC sum to get sum of all party.";
+            LOG(INFO) << "Run MPC sum to get sum of all party.";
 
-          eMatrix<double> plain_sum(2, 0);
-          plain_sum = mpc_op_exec_->revealAll(sh_sum);
+            i64Matrix plain_sum(2, 1);
+            plain_sum = mpc_op_exec_->revealAll(sh_sum);
 
-          LOG(INFO) << "Sum of column in all party is " << plain_sum(0, 0)
-                    << ", sum of count in all party is " << plain_sum(1, 0)
-                    << ".";
+            LOG(INFO) << "Sum of column in all party is " << plain_sum(0, 0)
+                      << ", sum of count in all party is " << plain_sum(1, 0)
+                      << ".";
 
-          LOG(INFO) << "Build new array to save column value, missing and "
-                       "abnormal value will be replaced by average value.";
+            LOG(INFO) << "Build new array to save column value, missing and "
+                         "abnormal value will be replaced by average value.";
 
-          // Update value in position that have null or abormal value with
-          // average value.
-          double col_avg = plain_sum(0, 0) / plain_sum(1, 0);
+            // Update value in position that have null or abormal value with
+            // average value.
+            int64_t col_avg = plain_sum(0, 0) / plain_sum(1, 0);
+            std::shared_ptr<arrow::Array> new_array;
+            if (use_db) {
+              _buildNewColumn(table, col_index, std::to_string(col_avg),
+                              db_both_index[iter->first], false, new_array);
+            } else {
+              _buildNewColumn(table, col_index, std::to_string(col_avg),
+                              abnormal_index, false, new_array);
+            }
+            std::shared_ptr<arrow::ChunkedArray> chunk_array =
+                std::make_shared<arrow::ChunkedArray>(new_array);
+            std::shared_ptr<arrow::Field> field =
+                std::make_shared<arrow::Field>(iter->first, arrow::int64());
 
-          std::shared_ptr<arrow::Array> new_array;
-          if (use_db) {
-            _buildNewColumn(table, col_index, std::to_string(col_avg),
-                            db_both_index[iter->first], true, new_array);
+            LOG(INFO) << "Replace column " << iter->first
+                      << " with new array in table.";
+
+            LOG(INFO) << "col_index:" << col_index;
+            LOG(INFO) << "name:" << field->name();
+            LOG(INFO) << "type:" << field->type();
+            LOG(INFO) << "table->type:" << table->field(col_index)->type();
+
+            auto result = table->SetColumn(col_index, field, chunk_array);
+            if (!result.ok()) {
+              std::stringstream ss;
+              ss << "Replace content of column " << iter->first << " failed, "
+                 << result.status();
+              LOG(ERROR) << ss.str();
+              throw std::runtime_error(ss.str());
+            }
+
+            table = result.ValueOrDie();
+            LOG(INFO) << "Finish.";
+          } else if (iter->second == 2) {
+            eMatrix<double> m(2, 1);
+            m(0, 0) = double_sum;
+            m(1, 0) = double_count;
+
+            LOG(INFO) << "Local column: sum " << double_sum << ", count "
+                      << double_count << ".";
+
+            sf64Matrix<D16> sh_m[3];
+            for (uint8_t i = 0; i < 3; i++) {
+              if (i == party_id_) {
+                sh_m[i].resize(2, 1);
+                mpc_op_exec_->createShares(m, sh_m[i]);
+              } else {
+                sh_m[i].resize(2, 1);
+                mpc_op_exec_->createShares(sh_m[i]);
+              }
+            }
+
+            sf64Matrix<D16> sh_sum;
+            sh_sum = sh_m[0];
+            for (int j = 1; j < 3; j++)
+              sh_sum = sh_sum + sh_m[j];
+
+            LOG(INFO) << "Run MPC sum to get sum of all party.";
+
+            eMatrix<double> plain_sum(2, 0);
+            plain_sum = mpc_op_exec_->revealAll(sh_sum);
+
+            LOG(INFO) << "Sum of column in all party is " << plain_sum(0, 0)
+                      << ", sum of count in all party is " << plain_sum(1, 0)
+                      << ".";
+
+            LOG(INFO) << "Build new array to save column value, missing and "
+                         "abnormal value will be replaced by average value.";
+
+            // Update value in position that have null or abormal value with
+            // average value.
+            double col_avg = plain_sum(0, 0) / plain_sum(1, 0);
+
+            std::shared_ptr<arrow::Array> new_array;
+            if (use_db) {
+              _buildNewColumn(table, col_index, std::to_string(col_avg),
+                              db_both_index[iter->first], true, new_array);
+            } else {
+              _buildNewColumn(table, col_index, std::to_string(col_avg),
+                              abnormal_index, true, new_array);
+            }
+            std::shared_ptr<arrow::ChunkedArray> chunk_array =
+                std::make_shared<arrow::ChunkedArray>(new_array);
+            std::shared_ptr<arrow::Field> field =
+                std::make_shared<arrow::Field>(iter->first, arrow::float64());
+
+            LOG(INFO) << "Replace column " << iter->first
+                      << " with new array in table.";
+
+            auto result = table->SetColumn(col_index, field, chunk_array);
+            if (!result.ok()) {
+              std::stringstream ss;
+              ss << "Replace content of column " << iter->first << " failed, "
+                 << result.status();
+              LOG(ERROR) << ss.str();
+              throw std::runtime_error(ss.str());
+            }
+
+            table = result.ValueOrDie();
+            LOG(INFO) << "Finish.";
           } else {
-            _buildNewColumn(table, col_index, std::to_string(col_avg),
-                            abnormal_index, true, new_array);
+            LOG(ERROR) << "Can't find value of column " << iter->first << ".";
           }
-          std::shared_ptr<arrow::ChunkedArray> chunk_array =
-              std::make_shared<arrow::ChunkedArray>(new_array);
-          std::shared_ptr<arrow::Field> field =
-              std::make_shared<arrow::Field>(iter->first, arrow::float64());
-
-          LOG(INFO) << "Replace column " << iter->first
-                    << " with new array in table.";
-
-          auto result = table->SetColumn(col_index, field, chunk_array);
-          if (!result.ok()) {
-            std::stringstream ss;
-            ss << "Replace content of column " << iter->first << " failed, "
-               << result.status();
-            LOG(ERROR) << ss.str();
-            throw std::runtime_error(ss.str());
-          }
-
-          table = result.ValueOrDie();
-          LOG(INFO) << "Finish.";
-        }else {
-         LOG(ERROR) << "Can't find value of column " << iter->first << ".";
         }
-      }
         //.........................................................................................
+      }
     }
-   }
   } catch (std::exception &e) {
     LOG(ERROR) << "In party " << party_id_ << ":\n" << e.what() << ".";
     return -1;
@@ -1573,7 +1571,7 @@ int MissingProcess::_LoadDatasetFromCSV(std::string &filename) {
 
   local_col_names = table->ColumnNames();
 
-//????????????????????????????????????????????????????
+  //????????????????????????????????????????????????????
   // 'array' include values in a column of csv file.
   int chunk_num = table->column(num_col - 1)->chunks().size();
   int array_len = 0;
