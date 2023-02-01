@@ -56,6 +56,7 @@ void MissingProcess::_spiltStr(string str, const string &split,
 
 int MissingProcess::_strToInt64(const std::string &str, int64_t &i64_val) {
   try {
+
     VLOG(5) << "Convert string '" << str << "' into int64 value.";
     size_t conv_length = 0;
     i64_val = stoll(str, &conv_length);
@@ -157,7 +158,7 @@ void MissingProcess::_buildNewColumn(std::shared_ptr<arrow::Table> table,
     for (auto &val : new_col_val[0])
       VLOG(5) << val;
   }
-  //???????????????????????????
+
   if (need_double) {
     arrow::MemoryPool *pool = arrow::default_memory_pool();
     arrow::DoubleBuilder builder(pool);
@@ -333,7 +334,7 @@ int MissingProcess::loadParams(primihub::rpc::Task &task) {
 
   bool found = false;
   std::string local_dataset;
-  //??????????????????????
+
   for (Value::ConstMemberIterator iter = doc.MemberBegin();
        iter != doc.MemberEnd(); iter++) {
     std::string ds_name = iter->name.GetString();
@@ -475,7 +476,9 @@ int MissingProcess::execute() {
 
     for (auto iter = col_and_dtype_.begin(); iter != col_and_dtype_.end();
          iter++) {
+
       //找到目标列
+
       auto t = std::find(local_col_names.begin(), local_col_names.end(),
                          iter->first);
 
@@ -492,8 +495,8 @@ int MissingProcess::execute() {
       // int64_t int_min = std::numeric_limits<int>::min();;
       // double double_max = std::numeric_limits<double>::max();;
       // double double_min = std::numeric_limits<double>::min();;
-      long int_max = LONG_MIN;
-      long int_min = LONG_MAX;
+      int64_t int_max = LONG_MIN;
+      int64_t int_min = LONG_MAX;
       double double_min = DBL_MAX;
       double double_max = DBL_MIN;
       // 0:avge 1:max 2:min
@@ -511,10 +514,11 @@ int MissingProcess::execute() {
         LOG(INFO) << "Begin to process column " << iter->first << ":";
         std::vector<std::vector<uint32_t>> abnormal_index;
         col_index = std::distance(local_col_names.begin(), t);
+        LOG(WARNING) << "col_index :" << col_index << ".";
 
-        //本地统计
         // Integer Long
         if (iter->second == 1 || iter->second == 3) {
+
           null_num = 0;
           int_count = 0;
           int_sum = 0;
@@ -525,7 +529,7 @@ int MissingProcess::execute() {
                     << " chunk(s), expect type is int64.";
 
           abnormal_index.resize(chunk_num);
-          // db形式的是如何找出错误值？
+
           if (use_db) {
             for (int k = 0; k < chunk_num; k++) {
               auto value_array = std::static_pointer_cast<Int64Array>(
@@ -534,6 +538,8 @@ int MissingProcess::execute() {
               for (int64_t j = 0; j < value_array->length(); j++) {
                 i64_val = value_array->Value(j);
                 int_sum += i64_val;
+                int_max = i64_val > int_max ? i64_val : int_max;
+                int_min = i64_val < int_min ? i64_val : int_min;
               }
             }
             int_count = table->num_rows() - db_both_index[iter->first].size();
@@ -544,8 +550,10 @@ int MissingProcess::execute() {
 
               // Detect string that can't convert into int64_t value.
               int ret = 0;
-              long i64_val = 0;
 
+              int64_t i64_val = 0;
+              LOG(WARNING) << "str_array->length() :" << str_array->length()
+                           << ".";
               for (int64_t j = 0; j < str_array->length(); j++) {
                 if (str_array->IsNull(j)) {
                   LOG(WARNING) << "Find missing value in column " << iter->first
@@ -554,8 +562,9 @@ int MissingProcess::execute() {
                 }
 
                 ret = _strToInt64(str_array->GetString(j), i64_val);
+
                 // convert fails
-                LOG(INFO) << "Init int_min is  " << int_min << ".";
+
                 if (ret != 0) {
                   abnormal_num++;
                   abnormal_index[k].emplace_back(j);
@@ -564,17 +573,21 @@ int MissingProcess::execute() {
                       << "' in column " << iter->first << ", chunk " << k
                       << ", index " << j << ".";
                 } else {
+
                   int_max = i64_val > int_max ? i64_val : int_max;
                   int_min = i64_val < int_min ? i64_val : int_min;
+
                   int_sum += i64_val;
                 }
               }
-              //为什么没有在上面判断isNull时，计算null_num?
+
               null_num +=
                   table->column(col_index)->chunk(k)->data()->GetNullCount();
             }
             int_count = table->num_rows() - null_num - abnormal_num;
+
           } // double
+
         } else if (iter->second == 2) {
           null_num = 0;
           double_count = 0;
@@ -594,6 +607,8 @@ int MissingProcess::execute() {
               for (int64_t j = 0; j < value_array->length(); j++) {
                 d_val = value_array->Value(j);
                 double_sum += d_val;
+                double_max = d_val > double_max ? d_val : double_max;
+                double_min = d_val < double_min ? d_val : double_min;
               }
             }
             double_count =
@@ -605,9 +620,9 @@ int MissingProcess::execute() {
               // Detect string that can't convert into double value.
               double d_val = 0;
               int ret = 0;
-              // LOG_INFO()<< str_array->length();
+
               for (int64_t j = 0; j < str_array->length(); j++) {
-                // LOG(INFO) << str_array->GetString(j);
+
                 if (str_array->IsNull(j)) {
                   LOG(WARNING) << "Find missing value in column " << iter->first
                                << ", chunk " << k << ", index " << j << ".";
@@ -623,8 +638,10 @@ int MissingProcess::execute() {
                       << ", index " << j << ".";
 
                 } else {
+
                   double_max = d_val > double_max ? d_val : double_max;
                   double_min = d_val < double_min ? d_val : double_min;
+
                   double_sum += d_val;
                 }
               }
@@ -636,12 +653,13 @@ int MissingProcess::execute() {
             double_count = table->num_rows() - null_num - abnormal_num;
           }
         }
+        LOG(WARNING) << "MPS start . ";
         // MPC
         //.........................................................................................
         const Decimal myD = D16;
         // 1:max 2:min 3:avg
         enum replace { MAX, MIN, AVG };
-        replace replace_type = MIN;
+        replace replace_type = AVG;
 
         if (replace_type == MAX) {
           if (iter->second == 1 || iter->second == 3) {
@@ -738,7 +756,7 @@ int MissingProcess::execute() {
               }
               i64Matrix plain_max(1, 1);
               plain_max = mpc_op_exec_->revealAll(sh_max);
-              LOG(WARNING) << "The max value is " << plain_max << " in column "
+              LOG(WARNING) << "The max value is " << plain_max << " in party "
                            << flag << ".";
               int_col_max = plain_max(0, 0);
             }
@@ -775,146 +793,7 @@ int MissingProcess::execute() {
 
             table = result.ValueOrDie();
             LOG(INFO) << "Finish.";
-            //.............................................
-            //  f64Matrix<myD> m(1, 1);
 
-            //   std::vector<bool> mpc_res;
-
-            //   m(0, 0) = (double)int_max;
-            //   LOG(INFO) << "The max of party" << party_id_ << " column is: "
-            //             << int_max << ".";
-
-            //   sbMatrix sh_res;
-            //   //first compare:p0-p1
-            //   if(party_id_!=2){
-            //     mpc_op_exec_->MPC_Compare(m, sh_res);
-            //   }else{
-            //     mpc_op_exec_->MPC_Compare(sh_res);
-            //   }
-            //   LOG(INFO) << "The first compare is completely. ";
-
-            //   i64Matrix tmp;
-            //   tmp.resize(sh_res.rows(), sh_res.i64Cols());
-            //   mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res,tmp).get();
-            //   for (size_t i = 0; i < tmp.rows(); i++){
-            //     mpc_res.emplace_back(static_cast<bool>(tmp(i, 0)));
-            //   }
-
-            //   LOG(INFO) << "First: the revealed sh_res is " << tmp << ".";
-            //   LOG(INFO) << "First: The mpc_res is " << mpc_res[0] << ".";
-
-            //   //second compare
-            //   //0:p0 is greater
-            //   //1:p1 is greater
-            //   //2:p2
-            //   int flag = 0;
-            //   sbMatrix sh_res2;
-            //   for(int i=0; i<mpc_res.size(); i++){
-            //     //p0<p1
-            //     if(mpc_res[i]){
-            //       flag = 1;
-            //       //p1-p2
-            //       if(party_id_!=0){
-            //         mpc_op_exec_->MPC_Compare(m, sh_res2);
-            //       }else{
-            //         mpc_op_exec_->MPC_Compare(sh_res2);
-            //       }
-            //     }
-            //     //p0>=p1
-            //     else{
-            //       flag = 0;
-            //       //p0-p2
-            //       if(party_id_!=1){
-            //         mpc_op_exec_->MPC_Compare(m, sh_res2);
-            //       }else{
-            //         mpc_op_exec_->MPC_Compare(sh_res2);
-            //       }
-            //     }
-            //   }
-
-            //   std::vector<bool> mpc_res2;
-            //   i64Matrix tmp2;
-            //   tmp2.resize(sh_res2.rows(), sh_res2.i64Cols());
-            //   mpc_op_exec_->enc.revealAll(mpc_op_exec_->runtime,sh_res2,tmp2).get();
-            //   for (size_t i = 0; i < tmp2.rows(); i++){
-            //     mpc_res2.emplace_back(static_cast<bool>(tmp2(i, 0)));
-            //   }
-
-            //   LOG(INFO) << "Second: The revealed sh_res is " << tmp2 << ".";
-            //   LOG(INFO) << "Second: The mpc_res2 is " << mpc_res2[0] << ".";
-
-            //   sf64Matrix<myD> sh_max;
-            //   sh_max.resize(m.rows(), m.cols());
-            //   for(int i=0; i<mpc_res2.size(); i++){
-            //     //max is p2
-            //     if(mpc_res2[i]){
-            //       flag = 2;
-            //       if(party_id_==2){
-            //         mpc_op_exec_->createShares(m, sh_max);
-            //       }else{
-            //         mpc_op_exec_->createShares(sh_max);
-            //       }
-            //     }else{
-            //       //max is p0 or p1
-            //       if(flag==0){
-            //         if(party_id_==0){
-            //           mpc_op_exec_->createShares(m, sh_max);
-            //         }else{
-            //           mpc_op_exec_->createShares(sh_max);
-            //       }
-            //       }else if(flag==1){
-            //         if(party_id_==1){
-            //           mpc_op_exec_->createShares(m, sh_max);
-            //       }else{
-            //         mpc_op_exec_->createShares(sh_max);
-            //       }
-            //       }
-            //     }
-            //     eMatrix<double> plain_max(1, 1);
-            //     plain_max = mpc_op_exec_->revealAll(sh_max);
-            //     LOG(WARNING) << "The max value is " << plain_max
-            //                 << " in column " << flag<< ".";
-            //     int_col_max = (int64_t)plain_max(0,0);
-
-            //   }
-
-            //   std::shared_ptr<arrow::Array> new_array;
-            //   if (use_db) {
-            //     _buildNewColumn(table, col_index,
-            //     std::to_string(int_col_max),
-            //                     db_both_index[iter->first], false,
-            //                     new_array);
-            //   } else {
-            //     _buildNewColumn(table, col_index,
-            //     std::to_string(int_col_max),
-            //                     abnormal_index, false, new_array);
-            //   }
-            //   std::shared_ptr<arrow::ChunkedArray> chunk_array =
-            //       std::make_shared<arrow::ChunkedArray>(new_array);
-            //   std::shared_ptr<arrow::Field> field =
-            //       std::make_shared<arrow::Field>(iter->first,
-            //       arrow::int64());
-
-            //   LOG(INFO) << "Replace column " << iter->first
-            //             << " with new array in table.";
-
-            //   LOG(INFO) << "col_index:" << col_index;
-            //   LOG(INFO) << "name:" << field->name();
-            //   LOG(INFO) << "type:" << field->type();
-            //   LOG(INFO) << "table->type:" << table->field(col_index)->type();
-
-            //   auto result = table->SetColumn(col_index, field, chunk_array);
-            //   if (!result.ok()) {
-            //     std::stringstream ss;
-            //     ss << "Replace content of column " << iter->first << "
-            //     failed, "
-            //       << result.status();
-            //     LOG(ERROR) << ss.str();
-            //     throw std::runtime_error(ss.str());
-            //   }
-
-            //   table = result.ValueOrDie();
-            //   LOG(INFO) << "Finish.";
             //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             //++++++++++++++++++++++++++++++++++++++Double+++++++++++++++++++++++++++++++++++++++++++++++
           } else if (iter->second == 2) {
@@ -1016,7 +895,7 @@ int MissingProcess::execute() {
               }
               eMatrix<double> plain_max(1, 1);
               plain_max = mpc_op_exec_->revealAll(sh_max);
-              LOG(WARNING) << "The max value is " << plain_max << " in column "
+              LOG(WARNING) << "The max value is " << plain_max << " in party "
                            << flag << ".";
               double_col_max = plain_max(0, 0);
             }
@@ -1147,7 +1026,7 @@ int MissingProcess::execute() {
               }
               i64Matrix plain_min(1, 1);
               plain_min = mpc_op_exec_->revealAll(sh_min);
-              LOG(WARNING) << "The max value is " << plain_min << " in column "
+              LOG(WARNING) << "The min value is " << plain_min << " in party "
                            << flag << ".";
               int_col_min = plain_min(0, 0);
             }
@@ -1286,7 +1165,7 @@ int MissingProcess::execute() {
               }
               eMatrix<double> plain_min(1, 1);
               plain_min = mpc_op_exec_->revealAll(sh_min);
-              LOG(WARNING) << "The min value is " << plain_min << " in column "
+              LOG(WARNING) << "The min value is " << plain_min << " in party "
                            << flag << ".";
               double_col_min = plain_min(0, 0);
             }
@@ -1537,7 +1416,7 @@ int MissingProcess::_LoadDatasetFromCSV(std::string &filename) {
 
   std::vector<std::string> target_column;
   for (auto &pair : col_and_dtype_) {
-    if (pair.second == 1 || pair.second == 2)
+    if (pair.second == 1 || pair.second == 2 || pair.second == 3)
       target_column.emplace_back(pair.first);
   }
 
@@ -1572,6 +1451,7 @@ int MissingProcess::_LoadDatasetFromCSV(std::string &filename) {
   local_col_names = table->ColumnNames();
 
   //????????????????????????????????????????????????????
+
   // 'array' include values in a column of csv file.
   int chunk_num = table->column(num_col - 1)->chunks().size();
   int array_len = 0;
